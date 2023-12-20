@@ -1,0 +1,56 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://sprites/block_types/question.svg" type="Texture" id=1]
+[ext_resource path="res://sprites/block.svg" type="Texture" id=2]
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+render_mode unshaded;
+
+uniform sampler2D gradient: hint_black;
+
+void fragment() {
+	vec4 input_color = texture(TEXTURE,UV);
+	//float grayscale_value = dot(input_color.rgb,vec3(0.299,0.587,0.114));
+	vec4 sampled_color = texture(gradient,UV);//texture(gradient,vec2(grayscale_value,0.0)).rgb;
+	
+	//COLOR.rgb = mix(input_color.rgb,sampled_color,mix_amount);
+	COLOR = sampled_color;
+	COLOR.a = input_color.a;
+}"
+
+[sub_resource type="Gradient" id=1]
+interpolation_mode = 2
+offsets = PoolRealArray( 0.00775194, 1 )
+colors = PoolColorArray( 1, 0.596906, 0.128906, 1, 0.78125, 0.417259, 0, 1 )
+
+[sub_resource type="GradientTexture" id=5]
+gradient = SubResource( 1 )
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
+shader_param/gradient = SubResource( 5 )
+
+[node name="QuestionBlock" type="Polygon2D"]
+color = Color( 1, 1, 1, 0 )
+polygon = PoolVector2Array( 128, 0, 90, 76, -125, 76, -88, 0, -125, -76, 90, -76 )
+__meta__ = {
+"_edit_group_": true
+}
+
+[node name="Sprite" type="Sprite" parent="."]
+material = SubResource( 4 )
+scale = Vector2( 0.25, 0.2 )
+texture = ExtResource( 2 )
+
+[node name="Shadow" type="Sprite" parent="Sprite"]
+modulate = Color( 0, 0, 0, 1 )
+show_behind_parent = true
+material = SubResource( 4 )
+position = Vector2( 15, 15 )
+texture = ExtResource( 2 )
+
+[node name="Icon" type="Sprite" parent="."]
+modulate = Color( 0, 0, 0, 1 )
+scale = Vector2( 0.5, 0.5 )
+texture = ExtResource( 1 )

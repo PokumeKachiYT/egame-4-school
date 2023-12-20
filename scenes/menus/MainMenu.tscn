@@ -1,0 +1,247 @@
+[gd_scene load_steps=20 format=2]
+
+[ext_resource path="res://sprites/pattern.svg" type="Texture" id=1]
+[ext_resource path="res://scripts/menus/BackgroundRotation.gd" type="Script" id=2]
+[ext_resource path="res://assets/Global.tscn" type="PackedScene" id=3]
+[ext_resource path="res://scenes/Environment.tscn" type="PackedScene" id=4]
+[ext_resource path="res://scripts/menus/MainMenuScript.gd" type="Script" id=5]
+[ext_resource path="res://sprites/circle.svg" type="Texture" id=6]
+[ext_resource path="res://fonts/clear-sans/ClearSans-Bold.ttf" type="DynamicFontData" id=7]
+[ext_resource path="res://scripts/menus/PlaySceneSwitch.gd" type="Script" id=8]
+[ext_resource path="res://scripts/menus/CreateSceneSwitch.gd" type="Script" id=9]
+
+[sub_resource type="Shader" id=91]
+code = "/* 
+Earthbound battle backgrounds shader with scrolling effect and palette cycling like in the original game.
+@retr0_dev
+	
+Apply the shader to a TextureRect or a Sprite. Use a texture with some shapes in a transparent background for best results.
+You can then use a ColorRect or another method to paint the background.
+You can use the shader on multiple TextureRects and obtain a double-buffer effect tweaking the values for each one, remember to Make Unique the shader material.
+*/
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float amplitude = 0.075;
+uniform float frequency = 10.0;
+uniform float speed = 2.0;
+uniform float amplitude_vertical = 0.0;
+uniform float frequency_vertical = 0.0;
+uniform float speed_vertical = 0.0;
+uniform vec2 scroll_direction = vec2(0.0, 0.0);
+uniform float scrolling_speed = 0.08;
+uniform bool enable_palette_cycling = false;
+uniform sampler2D palette;
+uniform float palette_speed = 0.1;
+
+uniform sampler2D gradient: hint_black;
+uniform float mix_amount;
+
+float random (vec2 uv) {
+    return fract(sin(dot(uv.xy,
+        vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+
+void fragment() {
+	float diff_x = amplitude * sin((frequency * UV.y) + (speed * TIME));// * random(UV);
+	float diff_y = amplitude_vertical * sin((frequency_vertical * UV.y)  + (speed_vertical * TIME)) * random(UV);
+	vec2 scroll = scroll_direction * TIME * scrolling_speed;
+	vec4 tex = texture(TEXTURE, vec2(UV.x + diff_x, UV.y + diff_y) + scroll);
+	float palette_swap = mod(tex.r - TIME * palette_speed, 1.0);
+	
+	if (enable_palette_cycling)
+	{
+		COLOR = vec4(texture(palette, vec2(palette_swap, 0)).rgb, tex.a);
+	}
+	else COLOR = tex;
+}"
+
+[sub_resource type="ShaderMaterial" id=92]
+shader = SubResource( 91 )
+shader_param/amplitude = 0.0
+shader_param/frequency = 16.0
+shader_param/speed = 1.0
+shader_param/amplitude_vertical = 0.0
+shader_param/frequency_vertical = 0.0
+shader_param/speed_vertical = 0.0
+shader_param/scroll_direction = Vector2( 0, 5 )
+shader_param/scrolling_speed = 0.1
+shader_param/enable_palette_cycling = false
+shader_param/palette_speed = 0.1
+shader_param/mix_amount = 1.0
+
+[sub_resource type="StyleBoxFlat" id=70]
+bg_color = Color( 0.768627, 0.25098, 0.72549, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=87]
+bg_color = Color( 0.698039, 0.207843, 0.658824, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=66]
+bg_color = Color( 0, 0.352941, 0.513726, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="DynamicFont" id=81]
+size = 72
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 7 )
+
+[sub_resource type="Theme" id=82]
+default_font = SubResource( 81 )
+Label/colors/font_color_shadow = Color( 0, 0, 0, 0.784314 )
+Label/constants/shadow_as_outline = 0
+Label/constants/shadow_offset_x = 2
+Label/constants/shadow_offset_y = 2
+
+[sub_resource type="StyleBoxFlat" id=89]
+bg_color = Color( 0.133333, 0.768627, 0, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=90]
+bg_color = Color( 0, 0.678431, 0, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=88]
+bg_color = Color( 0, 0.647059, 0.286275, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[node name="MainMenu" type="Node2D"]
+script = ExtResource( 5 )
+
+[node name="Global" parent="." instance=ExtResource( 3 )]
+
+[node name="Environment" parent="." instance=ExtResource( 4 )]
+
+[node name="MainBackground" type="Sprite" parent="."]
+modulate = Color( 1, 0.596078, 0.278431, 1 )
+material = SubResource( 92 )
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 2500, 7500 )
+script = ExtResource( 2 )
+
+[node name="Camera" type="Camera2D" parent="."]
+rotating = true
+current = true
+
+[node name="Gamemodes" type="HBoxContainer" parent="."]
+margin_left = -750.0
+margin_top = 100.0
+margin_right = 750.0
+margin_bottom = 250.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 250
+alignment = 1
+
+[node name="Play" type="Button" parent="Gamemodes"]
+margin_left = 225.0
+margin_right = 625.0
+margin_bottom = 150.0
+rect_min_size = Vector2( 400, 150 )
+custom_styles/hover = SubResource( 70 )
+custom_styles/pressed = SubResource( 87 )
+custom_styles/normal = SubResource( 66 )
+script = ExtResource( 8 )
+
+[node name="Label" type="Label" parent="Gamemodes/Play"]
+margin_right = 400.0
+margin_bottom = 150.0
+theme = SubResource( 82 )
+text = "PLAY"
+align = 1
+valign = 1
+
+[node name="Create" type="Button" parent="Gamemodes"]
+margin_left = 875.0
+margin_right = 1275.0
+margin_bottom = 150.0
+rect_min_size = Vector2( 400, 150 )
+custom_styles/hover = SubResource( 70 )
+custom_styles/pressed = SubResource( 87 )
+custom_styles/normal = SubResource( 66 )
+script = ExtResource( 9 )
+
+[node name="Label" type="Label" parent="Gamemodes/Create"]
+margin_right = 400.0
+margin_bottom = 150.0
+theme = SubResource( 82 )
+text = "CREATE"
+align = 1
+valign = 1
+
+[node name="Language" type="Button" parent="."]
+margin_left = -400.0
+margin_top = 375.0
+margin_right = 400.0
+margin_bottom = 525.0
+rect_min_size = Vector2( 400, 150 )
+custom_styles/hover = SubResource( 89 )
+custom_styles/pressed = SubResource( 90 )
+custom_styles/normal = SubResource( 88 )
+
+[node name="Label" type="Label" parent="Language"]
+margin_right = 800.0
+margin_bottom = 150.0
+theme = SubResource( 82 )
+text = "ENGLISH"
+align = 1
+valign = 1
+
+[node name="LoadCircle" type="Sprite" parent="."]
+visible = false
+modulate = Color( 0, 0, 0, 1 )
+scale = Vector2( 3, 3 )
+texture = ExtResource( 6 )

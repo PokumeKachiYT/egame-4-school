@@ -1,0 +1,1952 @@
+[gd_scene load_steps=98 format=2]
+
+[ext_resource path="res://scripts/game_editor/GameEditor.gd" type="Script" id=1]
+[ext_resource path="res://fonts/open-sans/Light.ttf" type="DynamicFontData" id=2]
+[ext_resource path="res://scenes/blocks/Start.tscn" type="PackedScene" id=3]
+[ext_resource path="res://fonts/roboto/Black.ttf" type="DynamicFontData" id=4]
+[ext_resource path="res://scenes/blocks/Question.tscn" type="PackedScene" id=5]
+[ext_resource path="res://sprites/block_types/question.svg" type="Texture" id=6]
+[ext_resource path="res://fonts/salma-pro/Medium.otf" type="DynamicFontData" id=7]
+[ext_resource path="res://scenes/game_editor/UI.tscn" type="PackedScene" id=8]
+[ext_resource path="res://scenes/blocks/End.tscn" type="PackedScene" id=9]
+[ext_resource path="res://scenes/blocks/Intro.tscn" type="PackedScene" id=11]
+[ext_resource path="res://sprites/block.png" type="Texture" id=12]
+[ext_resource path="res://scenes/Environment.tscn" type="PackedScene" id=13]
+[ext_resource path="res://assets/Global.tscn" type="PackedScene" id=14]
+[ext_resource path="res://sprites/block_types/intro.svg" type="Texture" id=16]
+[ext_resource path="res://fonts/open-sans/Semibold.ttf" type="DynamicFontData" id=17]
+[ext_resource path="res://scripts/game_editor/EditPanel.gd" type="Script" id=20]
+[ext_resource path="res://fonts/sunny-spells/Regular.ttf" type="DynamicFontData" id=21]
+[ext_resource path="res://fonts/courier-prime/Regular.ttf" type="DynamicFontData" id=22]
+[ext_resource path="res://scripts/menus/BackgroundRotation.gd" type="Script" id=23]
+[ext_resource path="res://fonts/consolas/Regular.ttf" type="DynamicFontData" id=24]
+[ext_resource path="res://sprites/folder.svg" type="Texture" id=25]
+[ext_resource path="res://sprites/file.svg" type="Texture" id=26]
+[ext_resource path="res://sprites/uncheck.svg" type="Texture" id=27]
+[ext_resource path="res://fonts/andika-basic/Regular.ttf" type="DynamicFontData" id=28]
+[ext_resource path="res://sprites/operations/delete.svg" type="Texture" id=29]
+[ext_resource path="res://sprites/pattern.svg" type="Texture" id=30]
+[ext_resource path="res://sprites/circle.svg" type="Texture" id=31]
+
+[sub_resource type="Shader" id=97]
+code = "/* 
+Earthbound battle backgrounds shader with scrolling effect and palette cycling like in the original game.
+@retr0_dev
+	
+Apply the shader to a TextureRect or a Sprite. Use a texture with some shapes in a transparent background for best results.
+You can then use a ColorRect or another method to paint the background.
+You can use the shader on multiple TextureRects and obtain a double-buffer effect tweaking the values for each one, remember to Make Unique the shader material.
+*/
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float amplitude = 0.075;
+uniform float frequency = 10.0;
+uniform float speed = 2.0;
+uniform float amplitude_vertical = 0.0;
+uniform float frequency_vertical = 0.0;
+uniform float speed_vertical = 0.0;
+uniform vec2 scroll_direction = vec2(0.0, 0.0);
+uniform float scrolling_speed = 0.08;
+uniform bool enable_palette_cycling = false;
+uniform sampler2D palette;
+uniform float palette_speed = 0.1;
+
+uniform sampler2D gradient: hint_black;
+uniform float mix_amount;
+
+float random (vec2 uv) {
+    return fract(sin(dot(uv.xy,
+        vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+
+void fragment() {
+	float diff_x = amplitude * sin((frequency * UV.y) + (speed * TIME));// * random(UV);
+	float diff_y = amplitude_vertical * sin((frequency_vertical * UV.y)  + (speed_vertical * TIME)) * random(UV);
+	vec2 scroll = scroll_direction * TIME * scrolling_speed;
+	vec4 tex = texture(TEXTURE, vec2(UV.x + diff_x, UV.y + diff_y) + scroll);
+	float palette_swap = mod(tex.r - TIME * palette_speed, 1.0);
+	
+	if (enable_palette_cycling)
+	{
+		COLOR = vec4(texture(palette, vec2(palette_swap, 0)).rgb, tex.a);
+	}
+	else COLOR = tex;
+}"
+
+[sub_resource type="ShaderMaterial" id=98]
+shader = SubResource( 97 )
+shader_param/amplitude = 0.005
+shader_param/frequency = 8.0
+shader_param/speed = 1.0
+shader_param/amplitude_vertical = 0.0
+shader_param/frequency_vertical = 0.0
+shader_param/speed_vertical = 0.0
+shader_param/scroll_direction = Vector2( 0, -10 )
+shader_param/scrolling_speed = 0.05
+shader_param/enable_palette_cycling = false
+shader_param/palette_speed = 0.1
+shader_param/mix_amount = 1.0
+
+[sub_resource type="DynamicFont" id=115]
+size = 100
+outline_size = 5
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 21 )
+
+[sub_resource type="Theme" id=40]
+default_font = SubResource( 115 )
+
+[sub_resource type="StyleBoxFlat" id=3]
+bg_color = Color( 0.960784, 0.313726, 0, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_bottom = 5
+border_color = Color( 1, 0.521569, 0.286275, 1 )
+corner_radius_top_left = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="GDScript" id=14]
+resource_name = "AddButton"
+script/source = "extends Panel
+
+var tween = Tween.new()
+onready var root = get_parent()
+export var toggled: bool = false
+
+onready var button = get_node(\"RotationHelper/Button\")
+
+func on_click() -> void:
+	if root.paused:
+		return
+	
+	tween.remove(get_node(\"Background\"),'rect_size:x')
+	tween.remove(get_node(\"RotationHelper\"),'rotation_degrees')
+	tween.interpolate_property(
+		get_node(\"RotationHelper\"),'rotation_degrees',
+		get_node(\"RotationHelper\").rotation_degrees,0 if toggled else 360,
+		.35,Tween.TRANS_CIRC,Tween.EASE_OUT
+	)
+	tween.interpolate_property(
+		get_node(\"Background\"),'rect_size:x',
+		get_node(\"Background\").rect_size.x,100 if toggled else 500,
+		.45,Tween.TRANS_EXPO,Tween.EASE_OUT
+	)
+	tween.start()
+	
+	toggled = not toggled
+
+func on_hover(is_hovering) -> void:
+	pass
+
+func _ready() -> void:
+	add_child(tween)
+	button.connect('mouse_entered',self,'on_hover',[true])
+	button.connect('mouse_exited',self,'on_hover',[false])
+	button.connect('pressed',self,'on_click')
+"
+
+[sub_resource type="StyleBoxFlat" id=7]
+bg_color = Color( 0.960784, 0.313726, 0, 1 )
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 0.521569, 0.286275, 1 )
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+
+[sub_resource type="StyleBoxFlat" id=8]
+bg_color = Color( 1, 1, 1, 0.196078 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.0980392, 0.0980392, 0.0980392, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=9]
+bg_color = Color( 0, 0, 0, 0.196078 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.0980392, 0.0980392, 0.0980392, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=10]
+bg_color = Color( 1, 1, 1, 0.0980392 )
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color( 0.0980392, 0.0980392, 0.0980392, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=2]
+size = 128
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+extra_spacing_top = -100
+extra_spacing_bottom = -100
+extra_spacing_char = -100
+extra_spacing_space = -100
+font_data = ExtResource( 4 )
+
+[sub_resource type="Theme" id=4]
+default_font = SubResource( 2 )
+
+[sub_resource type="StyleBoxEmpty" id=5]
+
+[sub_resource type="StyleBoxEmpty" id=6]
+
+[sub_resource type="Shader" id=86]
+code = "shader_type canvas_item;
+render_mode unshaded;
+
+uniform sampler2D gradient: hint_black;
+uniform float mix_amount = 1.0;
+
+void fragment() {
+	vec4 input_color = texture(TEXTURE,UV);
+	//float grayscale_value = dot(input_color.rgb,vec3(0.299,0.587,0.114));
+	vec4 sampled_color = texture(gradient,UV);//texture(gradient,vec2(grayscale_value,0.0)).rgb;
+	
+	//COLOR.rgb = mix(input_color.rgb,sampled_color,mix_amount);
+	COLOR = sampled_color;
+	COLOR.a = input_color.a;
+}"
+
+[sub_resource type="Gradient" id=37]
+interpolation_mode = 2
+offsets = PoolRealArray( 0, 0.990196 )
+colors = PoolColorArray( 0, 0.238692, 0.42334, 1, 0, 0.266667, 0.427451, 1 )
+
+[sub_resource type="GradientTexture" id=87]
+gradient = SubResource( 37 )
+width = 4096
+
+[sub_resource type="ShaderMaterial" id=36]
+shader = SubResource( 86 )
+shader_param/mix_amount = 1.0
+shader_param/gradient = SubResource( 87 )
+
+[sub_resource type="StyleBoxFlat" id=34]
+bg_color = Color( 0.258824, 0, 0.545098, 1 )
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="DynamicFont" id=102]
+size = 54
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 17 )
+
+[sub_resource type="Theme" id=103]
+default_font = SubResource( 102 )
+Label/colors/font_color_shadow = Color( 0, 0, 0, 1 )
+Label/constants/shadow_as_outline = 0
+Label/constants/shadow_offset_x = 1
+Label/constants/shadow_offset_y = 1
+
+[sub_resource type="StyleBoxFlat" id=109]
+bg_color = Color( 0, 0, 0, 0.211765 )
+corner_radius_top_left = 50
+corner_radius_top_right = 50
+corner_radius_bottom_right = 50
+corner_radius_bottom_left = 50
+
+[sub_resource type="DynamicFont" id=104]
+size = 45
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 7 )
+
+[sub_resource type="Theme" id=105]
+default_font = SubResource( 104 )
+
+[sub_resource type="StyleBoxFlat" id=108]
+bg_color = Color( 0, 0.333333, 0.803922, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.313726, 0.388235, 0.690196, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=107]
+bg_color = Color( 0, 0.196078, 0.470588, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.313726, 0.388235, 0.690196, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=106]
+bg_color = Color( 0, 0.254902, 0.611765, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.313726, 0.388235, 0.690196, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=112]
+size = 100
+outline_size = 5
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 21 )
+
+[sub_resource type="Theme" id=111]
+default_font = SubResource( 112 )
+
+[sub_resource type="DynamicFont" id=93]
+size = 28
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="Theme" id=59]
+default_font = SubResource( 93 )
+
+[sub_resource type="StyleBoxFlat" id=52]
+bg_color = Color( 0.329412, 0.0823529, 0.32549, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.14902, 0, 0.184314, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=51]
+bg_color = Color( 0.266667, 0.054902, 0.262745, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.14902, 0, 0.184314, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=94]
+size = 40
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 28 )
+
+[sub_resource type="Theme" id=68]
+default_font = SubResource( 94 )
+
+[sub_resource type="StyleBoxFlat" id=67]
+bg_color = Color( 0.643137, 0.192157, 0.113725, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 0.47451, 0.47451, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=66]
+bg_color = Color( 0.0352941, 0.47451, 0.0588235, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.435294, 1, 0.760784, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=89]
+size = 50
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 24 )
+
+[sub_resource type="Theme" id=48]
+default_font = SubResource( 89 )
+
+[sub_resource type="StyleBoxFlat" id=49]
+bg_color = Color( 0.470588, 0, 0.176471, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.917647, 0.45098, 1, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=110]
+bg_color = Color( 0, 0.490196, 0.364706, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.45098, 1, 0.898039, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=90]
+size = 25
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 28 )
+
+[sub_resource type="Theme" id=46]
+default_font = SubResource( 90 )
+
+[sub_resource type="DynamicFont" id=91]
+size = 25
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 4 )
+
+[sub_resource type="Theme" id=55]
+default_font = SubResource( 91 )
+
+[sub_resource type="StyleBoxFlat" id=57]
+bg_color = Color( 0.498039, 0.4, 0.231373, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=56]
+bg_color = Color( 0.462745, 0.360784, 0.180392, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="DynamicFont" id=95]
+size = 35
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 28 )
+
+[sub_resource type="Theme" id=71]
+default_font = SubResource( 95 )
+
+[sub_resource type="StyleBoxFlat" id=72]
+bg_color = Color( 0.466667, 0.298039, 0.588235, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=83]
+bg_color = Color( 0.392157, 0.360784, 0.266667, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=118]
+bg_color = Color( 0.145098, 0.121569, 0.054902, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=78]
+bg_color = Color( 0.172549, 0.156863, 0.105882, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=117]
+bg_color = Color( 0.454902, 0.435294, 0.360784, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id=116]
+bg_color = Color( 0.156863, 0.145098, 0.0980392, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id=81]
+bg_color = Color( 0.266602, 0.254997, 0.212448, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="DynamicFont" id=96]
+size = 50
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 22 )
+
+[sub_resource type="Theme" id=77]
+default_font = SubResource( 96 )
+
+[sub_resource type="StyleBoxFlat" id=113]
+bg_color = Color( 0.403922, 0.239216, 0.615686, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=114]
+bg_color = Color( 0.188235, 0, 0.439216, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=74]
+bg_color = Color( 0.286275, 0.137255, 0.482353, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=88]
+size = 65
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 24 )
+
+[sub_resource type="Theme" id=42]
+default_font = SubResource( 88 )
+Label/colors/font_color_shadow = Color( 0, 0, 0, 1 )
+Label/constants/shadow_as_outline = 0
+Label/constants/shadow_offset_x = 2
+Label/constants/shadow_offset_y = 2
+
+[sub_resource type="StyleBoxFlat" id=53]
+bg_color = Color( 0.321569, 0.231373, 0.478431, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="DynamicFont" id=92]
+size = 45
+outline_size = 3
+outline_color = Color( 0.207843, 0, 0.12549, 1 )
+use_filter = true
+font_data = ExtResource( 2 )
+
+[sub_resource type="Theme" id=64]
+default_font = SubResource( 92 )
+
+[sub_resource type="StyleBoxFlat" id=84]
+bg_color = Color( 0.301961, 0.290196, 0.243137, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id=75]
+bg_color = Color( 0.4, 0.341176, 0.615686, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+border_blend = true
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=44]
+bg_color = Color( 0.223529, 0.321569, 0.529412, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=43]
+bg_color = Color( 0.4, 1, 0.776471, 1 )
+
+[node name="GameEditor" type="Node2D"]
+script = ExtResource( 1 )
+__meta__ = {
+"_editor_description_": "																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				"
+}
+
+[node name="LoadImage" type="FileDialog" parent="."]
+margin_right = 216.0
+margin_bottom = 130.0
+rect_min_size = Vector2( 150, 52.5 )
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_icons/folder = ExtResource( 25 )
+custom_icons/file = ExtResource( 26 )
+window_title = "Open a File"
+resizable = true
+mode = 0
+access = 2
+
+[node name="MainBackground" type="Sprite" parent="."]
+modulate = Color( 0.290196, 0.145098, 0.145098, 1 )
+material = SubResource( 98 )
+position = Vector2( 960, 540 )
+texture = ExtResource( 30 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 100000, 7500 )
+script = ExtResource( 23 )
+multiplier = 0.0
+
+[node name="Global" parent="." instance=ExtResource( 14 )]
+
+[node name="Environment" parent="." instance=ExtResource( 13 )]
+
+[node name="Camera" type="Camera2D" parent="."]
+position = Vector2( 960, 540 )
+rotating = true
+current = true
+
+[node name="Templates" type="Node" parent="."]
+
+[node name="question" parent="Templates" instance=ExtResource( 5 )]
+visible = false
+position = Vector2( 210, -250 )
+
+[node name="intro" parent="Templates" instance=ExtResource( 11 )]
+visible = false
+position = Vector2( 0, -250 )
+
+[node name="Blocks" type="Node2D" parent="."]
+position = Vector2( 960, 240 )
+
+[node name="Start" parent="Blocks" instance=ExtResource( 3 )]
+texture = ExtResource( 12 )
+
+[node name="End" parent="Blocks" instance=ExtResource( 9 )]
+position = Vector2( 210, 0 )
+
+[node name="Pointer" type="Label" parent="."]
+margin_left = 950.0
+margin_top = 320.0
+margin_right = 975.0
+margin_bottom = 420.0
+theme = SubResource( 40 )
+custom_colors/font_color = Color( 1, 0, 0, 1 )
+custom_colors/font_color_shadow = Color( 1, 1, 1, 1 )
+text = "^"
+align = 1
+valign = 1
+
+[node name="UI" parent="." instance=ExtResource( 8 )]
+margin_left = 960.0
+margin_top = 540.0
+margin_right = 960.0
+margin_bottom = 540.0
+
+[node name="Add" type="Panel" parent="."]
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 110.0
+margin_bottom = 110.0
+mouse_filter = 2
+custom_styles/panel = SubResource( 3 )
+script = SubResource( 14 )
+
+[node name="Background" type="Panel" parent="Add"]
+show_behind_parent = true
+margin_left = 5.0
+margin_right = 105.0
+margin_bottom = 100.0
+rect_clip_content = true
+mouse_filter = 2
+custom_styles/panel = SubResource( 7 )
+
+[node name="Options" type="HBoxContainer" parent="Add/Background"]
+margin_top = 5.0
+margin_right = 500.0
+margin_bottom = 95.0
+mouse_filter = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 10
+alignment = 1
+
+[node name="Intro" type="Button" parent="Add/Background/Options"]
+margin_left = 145.0
+margin_right = 245.0
+margin_bottom = 90.0
+rect_min_size = Vector2( 100, 90 )
+focus_mode = 0
+custom_styles/hover = SubResource( 8 )
+custom_styles/pressed = SubResource( 9 )
+custom_styles/normal = SubResource( 10 )
+enabled_focus_mode = 0
+icon = ExtResource( 16 )
+icon_align = 1
+expand_icon = true
+
+[node name="Question" type="Button" parent="Add/Background/Options"]
+margin_left = 255.0
+margin_right = 355.0
+margin_bottom = 90.0
+rect_min_size = Vector2( 100, 90 )
+focus_mode = 0
+custom_styles/hover = SubResource( 8 )
+custom_styles/pressed = SubResource( 9 )
+custom_styles/normal = SubResource( 10 )
+enabled_focus_mode = 0
+icon = ExtResource( 6 )
+icon_align = 1
+expand_icon = true
+
+[node name="RotationHelper" type="Node2D" parent="Add"]
+position = Vector2( 50, 50 )
+
+[node name="Button" type="Button" parent="Add/RotationHelper"]
+margin_left = -50.0
+margin_top = -50.0
+margin_right = 50.0
+margin_bottom = 50.0
+focus_mode = 0
+theme = SubResource( 4 )
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 1, 0.72549, 0.505882, 1 )
+custom_colors/font_color_pressed = Color( 1, 0.545098, 0.184314, 1 )
+custom_styles/hover = SubResource( 5 )
+custom_styles/pressed = SubResource( 6 )
+custom_styles/normal = SubResource( 6 )
+enabled_focus_mode = 0
+text = "+"
+icon_align = 1
+
+[node name="Shadow" type="Button" parent="Add/RotationHelper/Button"]
+self_modulate = Color( 0, 0, 0, 1 )
+show_behind_parent = true
+margin_left = 2.0
+margin_top = 2.0
+margin_right = 102.0
+margin_bottom = 102.0
+focus_mode = 0
+mouse_filter = 2
+theme = SubResource( 4 )
+custom_colors/font_color_disabled = Color( 1, 1, 1, 1 )
+custom_colors/font_color = Color( 0.898039, 0.827451, 0.937255, 1 )
+custom_colors/font_color_hover = Color( 0.768627, 0.505882, 1, 1 )
+custom_colors/font_color_pressed = Color( 0.764706, 0.305882, 1, 1 )
+custom_styles/hover = SubResource( 6 )
+custom_styles/pressed = SubResource( 6 )
+custom_styles/disabled = SubResource( 6 )
+custom_styles/normal = SubResource( 6 )
+disabled = true
+enabled_focus_mode = 0
+text = "+"
+icon_align = 1
+
+[node name="EditPanel" type="Panel" parent="."]
+material = SubResource( 36 )
+margin_left = 960.0
+margin_top = 575.0
+margin_right = 2710.0
+margin_bottom = 1075.0
+rect_clip_content = true
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_styles/panel = SubResource( 34 )
+script = ExtResource( 20 )
+
+[node name="question" type="ScrollContainer" parent="EditPanel"]
+visible = false
+margin_left = 25.0
+margin_right = 1725.0
+margin_bottom = 500.0
+scroll_horizontal_enabled = false
+scroll_vertical = 100
+
+[node name="VBox" type="VBoxContainer" parent="EditPanel/question"]
+margin_right = 1700.0
+margin_bottom = 1310.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 50
+
+[node name="QuestionType" type="Control" parent="EditPanel/question/VBox"]
+margin_right = 1700.0
+margin_bottom = 175.0
+rect_min_size = Vector2( 0, 175 )
+
+[node name="Label" type="Label" parent="EditPanel/question/VBox/QuestionType"]
+margin_right = 1700.0
+margin_bottom = 75.0
+theme = SubResource( 103 )
+custom_styles/normal = SubResource( 109 )
+text = "QUESTION TYPE"
+align = 1
+valign = 1
+
+[node name="Options" type="HBoxContainer" parent="EditPanel/question/VBox/QuestionType"]
+margin_top = 85.0
+margin_right = 1700.0
+margin_bottom = 160.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 10
+alignment = 1
+
+[node name="Normal" type="Button" parent="EditPanel/question/VBox/QuestionType/Options"]
+margin_left = 15.0
+margin_right = 565.0
+margin_bottom = 85.0
+rect_min_size = Vector2( 550, 85 )
+focus_mode = 0
+theme = SubResource( 105 )
+custom_styles/hover = SubResource( 108 )
+custom_styles/pressed = SubResource( 107 )
+custom_styles/normal = SubResource( 106 )
+enabled_focus_mode = 0
+text = "NORMAL"
+
+[node name="Matching" type="Button" parent="EditPanel/question/VBox/QuestionType/Options"]
+margin_left = 575.0
+margin_right = 1125.0
+margin_bottom = 85.0
+rect_min_size = Vector2( 550, 85 )
+focus_mode = 0
+theme = SubResource( 105 )
+custom_styles/hover = SubResource( 108 )
+custom_styles/pressed = SubResource( 107 )
+custom_styles/normal = SubResource( 106 )
+enabled_focus_mode = 0
+text = "MATCHING"
+
+[node name="Blank" type="Button" parent="EditPanel/question/VBox/QuestionType/Options"]
+margin_left = 1135.0
+margin_right = 1685.0
+margin_bottom = 85.0
+rect_min_size = Vector2( 550, 85 )
+focus_mode = 0
+theme = SubResource( 105 )
+custom_styles/hover = SubResource( 108 )
+custom_styles/pressed = SubResource( 107 )
+custom_styles/normal = SubResource( 106 )
+enabled_focus_mode = 0
+text = "FILL IN THE BLANKS"
+
+[node name="Pointer" type="Label" parent="EditPanel/question/VBox/QuestionType"]
+margin_left = 270.0
+margin_top = 175.0
+margin_right = 295.0
+margin_bottom = 275.0
+theme = SubResource( 111 )
+custom_colors/font_color = Color( 0, 0.101961, 1, 1 )
+custom_colors/font_outline_modulate = Color( 0, 0, 0, 1 )
+custom_colors/font_color_shadow = Color( 0, 1, 0.560784, 1 )
+text = "^"
+align = 1
+valign = 1
+
+[node name="Limit" type="VBoxContainer" parent="EditPanel/question/VBox"]
+margin_top = 225.0
+margin_right = 1700.0
+margin_bottom = 353.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Label" type="Label" parent="EditPanel/question/VBox/Limit"]
+margin_right = 1700.0
+margin_bottom = 74.0
+rect_min_size = Vector2( 1700, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 103 )
+custom_styles/normal = SubResource( 109 )
+text = "LIMIT"
+align = 1
+valign = 1
+
+[node name="Input" type="HBoxContainer" parent="EditPanel/question/VBox/Limit"]
+margin_left = 37.0
+margin_top = 78.0
+margin_right = 1662.0
+margin_bottom = 128.0
+rect_min_size = Vector2( 550, 50 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+custom_constants/separation = 25
+alignment = 1
+
+[node name="Submission" type="LineEdit" parent="EditPanel/question/VBox/Limit/Input"]
+margin_right = 525.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 525, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "SUBMISSIONS: 0"
+placeholder_alpha = 0.35
+
+[node name="Resubmission" type="LineEdit" parent="EditPanel/question/VBox/Limit/Input"]
+margin_left = 550.0
+margin_right = 1075.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 525, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "RESUBMISSIONS: 0"
+placeholder_alpha = 0.35
+
+[node name="Time" type="LineEdit" parent="EditPanel/question/VBox/Limit/Input"]
+margin_left = 1100.0
+margin_right = 1625.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 525, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "TIME (s): 0"
+placeholder_alpha = 0.35
+
+[node name="Validation" type="VBoxContainer" parent="EditPanel/question/VBox"]
+margin_top = 403.0
+margin_right = 1700.0
+margin_bottom = 610.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Label" type="Label" parent="EditPanel/question/VBox/Validation"]
+margin_right = 1700.0
+margin_bottom = 74.0
+rect_min_size = Vector2( 1700, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 103 )
+custom_styles/normal = SubResource( 109 )
+text = "VALIDATION"
+align = 1
+valign = 1
+
+[node name="Toggle" type="Button" parent="EditPanel/question/VBox/Validation"]
+margin_top = 78.0
+margin_right = 1700.0
+margin_bottom = 153.0
+rect_min_size = Vector2( 500, 75 )
+focus_mode = 0
+theme = SubResource( 68 )
+custom_styles/hover = SubResource( 67 )
+custom_styles/pressed = SubResource( 66 )
+custom_styles/normal = SubResource( 67 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "MANUAL"
+icon_align = 1
+
+[node name="Input" type="HBoxContainer" parent="EditPanel/question/VBox/Validation"]
+margin_left = 575.0
+margin_top = 157.0
+margin_right = 1125.0
+margin_bottom = 207.0
+rect_min_size = Vector2( 550, 50 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+custom_constants/separation = 25
+alignment = 1
+
+[node name="Score" type="LineEdit" parent="EditPanel/question/VBox/Validation/Input"]
+margin_left = 12.0
+margin_right = 262.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 250, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "SCORE: 5"
+placeholder_alpha = 0.35
+
+[node name="Penalty" type="LineEdit" parent="EditPanel/question/VBox/Validation/Input"]
+margin_left = 287.0
+margin_right = 537.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 250, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "PENALTY: 5"
+placeholder_alpha = 0.35
+
+[node name="Normal" type="HBoxContainer" parent="EditPanel/question/VBox"]
+margin_top = 660.0
+margin_right = 1700.0
+margin_bottom = 1310.0
+rect_min_size = Vector2( 1700, 650 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Content" type="VBoxContainer" parent="EditPanel/question/VBox/Normal"]
+margin_left = 23.0
+margin_right = 673.0
+margin_bottom = 175.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 15
+alignment = 1
+
+[node name="Label" type="Label" parent="EditPanel/question/VBox/Normal/Content"]
+margin_right = 650.0
+margin_bottom = 75.0
+rect_min_size = Vector2( 650, 75 )
+size_flags_horizontal = 4
+theme = SubResource( 103 )
+custom_styles/normal = SubResource( 109 )
+text = "CONTENT"
+align = 1
+valign = 1
+
+[node name="ContentType" type="Button" parent="EditPanel/question/VBox/Normal/Content"]
+margin_top = 100.0
+margin_right = 650.0
+margin_bottom = 175.0
+rect_min_size = Vector2( 500, 75 )
+focus_mode = 0
+theme = SubResource( 48 )
+custom_styles/hover = SubResource( 49 )
+custom_styles/pressed = SubResource( 110 )
+custom_styles/normal = SubResource( 49 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "text"
+icon_align = 1
+
+[node name="TextContent" type="TextEdit" parent="EditPanel/question/VBox/Normal/Content"]
+visible = false
+margin_top = 200.0
+margin_right = 650.0
+margin_bottom = 712.0
+rect_min_size = Vector2( 512, 512 )
+theme = SubResource( 46 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+
+[node name="ImageContent" type="TextureRect" parent="EditPanel/question/VBox/Normal/Content"]
+visible = false
+margin_top = 737.0
+margin_right = 650.0
+margin_bottom = 1249.0
+rect_min_size = Vector2( 512, 512 )
+expand = true
+stretch_mode = 6
+
+[node name="Load" type="Button" parent="EditPanel/question/VBox/Normal/Content/ImageContent"]
+margin_left = 265.0
+margin_right = 385.0
+margin_bottom = 45.0
+focus_mode = 0
+theme = SubResource( 55 )
+custom_styles/hover = SubResource( 57 )
+custom_styles/pressed = SubResource( 56 )
+custom_styles/normal = SubResource( 56 )
+enabled_focus_mode = 0
+text = "LOAD"
+icon_align = 1
+
+[node name="Misc" type="VBoxContainer" parent="EditPanel/question/VBox/Normal"]
+margin_left = 677.0
+margin_right = 1677.0
+margin_bottom = 153.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 15
+alignment = 1
+
+[node name="Label" type="Label" parent="EditPanel/question/VBox/Normal/Misc"]
+margin_right = 1000.0
+margin_bottom = 74.0
+rect_min_size = Vector2( 1000, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 103 )
+custom_styles/normal = SubResource( 109 )
+text = "MISC"
+align = 1
+valign = 1
+
+[node name="MultipleChoiceButton" type="Button" parent="EditPanel/question/VBox/Normal/Misc"]
+margin_top = 78.0
+margin_right = 1000.0
+margin_bottom = 153.0
+rect_min_size = Vector2( 1000, 75 )
+focus_mode = 0
+theme = SubResource( 68 )
+custom_styles/hover = SubResource( 67 )
+custom_styles/pressed = SubResource( 66 )
+custom_styles/normal = SubResource( 67 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "MULTIPLE CHOICE"
+icon_align = 1
+
+[node name="MultipleChoiceUI" type="VBoxContainer" parent="EditPanel/question/VBox/Normal/Misc"]
+visible = false
+margin_top = 157.0
+margin_right = 1000.0
+margin_bottom = 218.0
+size_flags_horizontal = 5
+size_flags_vertical = 0
+custom_constants/separation = 2
+alignment = 1
+
+[node name="AnswerTemplate" type="HBoxContainer" parent="EditPanel/question/VBox/Normal/Misc/MultipleChoiceUI"]
+visible = false
+margin_left = 8.0
+margin_top = 90.0
+margin_right = 991.0
+margin_bottom = 165.0
+rect_clip_content = true
+size_flags_horizontal = 6
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Answer" type="TextEdit" parent="EditPanel/question/VBox/Normal/Misc/MultipleChoiceUI/AnswerTemplate"]
+margin_right = 825.0
+margin_bottom = 75.0
+rect_min_size = Vector2( 825, 75 )
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = SubResource( 71 )
+custom_styles/normal = SubResource( 72 )
+smooth_scrolling = true
+wrap_enabled = true
+
+[node name="Validity" type="Button" parent="EditPanel/question/VBox/Normal/Misc/MultipleChoiceUI/AnswerTemplate"]
+margin_left = 829.0
+margin_right = 904.0
+margin_bottom = 75.0
+rect_min_size = Vector2( 75, 75 )
+focus_mode = 0
+custom_styles/hover = SubResource( 83 )
+custom_styles/pressed = SubResource( 118 )
+custom_styles/normal = SubResource( 78 )
+enabled_focus_mode = 0
+icon = ExtResource( 27 )
+icon_align = 1
+expand_icon = true
+
+[node name="Delete" type="Button" parent="EditPanel/question/VBox/Normal/Misc/MultipleChoiceUI/AnswerTemplate"]
+margin_left = 908.0
+margin_right = 983.0
+margin_bottom = 75.0
+rect_min_size = Vector2( 75, 75 )
+focus_mode = 0
+custom_styles/hover = SubResource( 117 )
+custom_styles/pressed = SubResource( 116 )
+custom_styles/normal = SubResource( 81 )
+enabled_focus_mode = 0
+icon = ExtResource( 29 )
+icon_align = 1
+expand_icon = true
+
+[node name="NewAnswer" type="Button" parent="EditPanel/question/VBox/Normal/Misc/MultipleChoiceUI"]
+margin_right = 1000.0
+margin_bottom = 61.0
+rect_min_size = Vector2( 0, 50 )
+focus_mode = 0
+theme = SubResource( 77 )
+custom_styles/hover = SubResource( 113 )
+custom_styles/pressed = SubResource( 114 )
+custom_styles/normal = SubResource( 74 )
+enabled_focus_mode = 0
+text = "+"
+icon_align = 1
+
+[node name="Matching" type="HBoxContainer" parent="EditPanel/question/VBox"]
+visible = false
+margin_top = 179.0
+margin_right = 1700.0
+margin_bottom = 829.0
+rect_min_size = Vector2( 1700, 650 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Content" type="VBoxContainer" parent="EditPanel/question/VBox/Matching"]
+margin_left = 42.0
+margin_right = 554.0
+margin_bottom = 647.0
+size_flags_horizontal = 5
+size_flags_vertical = 0
+alignment = 1
+
+[node name="MainLabel" type="Label" parent="EditPanel/question/VBox/Matching/Content"]
+margin_left = 130.0
+margin_right = 382.0
+margin_bottom = 66.0
+rect_min_size = Vector2( 250, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 42 )
+text = "Content"
+align = 1
+valign = 1
+
+[node name="ContentType" type="Button" parent="EditPanel/question/VBox/Matching/Content"]
+margin_top = 70.0
+margin_right = 512.0
+margin_bottom = 131.0
+focus_mode = 0
+theme = SubResource( 48 )
+custom_styles/hover = SubResource( 49 )
+custom_styles/pressed = SubResource( 53 )
+custom_styles/normal = SubResource( 49 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "text"
+icon_align = 1
+
+[node name="TextContent" type="TextEdit" parent="EditPanel/question/VBox/Matching/Content"]
+visible = false
+margin_top = 169.0
+margin_right = 720.0
+margin_bottom = 889.0
+rect_min_size = Vector2( 512, 512 )
+theme = SubResource( 46 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+
+[node name="ImageContent" type="TextureRect" parent="EditPanel/question/VBox/Matching/Content"]
+margin_top = 135.0
+margin_right = 512.0
+margin_bottom = 647.0
+rect_min_size = Vector2( 512, 512 )
+expand = true
+stretch_mode = 6
+
+[node name="Load" type="Button" parent="EditPanel/question/VBox/Matching/Content/ImageContent"]
+margin_left = 196.0
+margin_top = 10.0
+margin_right = 316.0
+margin_bottom = 55.0
+focus_mode = 0
+theme = SubResource( 55 )
+custom_styles/hover = SubResource( 57 )
+custom_styles/pressed = SubResource( 56 )
+custom_styles/normal = SubResource( 56 )
+enabled_focus_mode = 0
+text = "LOAD"
+icon_align = 1
+
+[node name="Settings" type="VBoxContainer" parent="EditPanel/question/VBox/Matching"]
+margin_left = 558.0
+margin_right = 1658.0
+margin_bottom = 516.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+alignment = 1
+
+[node name="MainLabel" type="Label" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_left = 406.0
+margin_right = 694.0
+margin_bottom = 66.0
+rect_min_size = Vector2( 250, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 42 )
+text = "Settings"
+align = 1
+valign = 1
+
+[node name="LimitLabel" type="Label" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 70.0
+margin_right = 1100.0
+margin_bottom = 122.0
+rect_min_size = Vector2( 1100, 52 )
+size_flags_horizontal = 4
+theme = SubResource( 64 )
+text = "-----------------------------------LIMIT-----------------------------------"
+align = 1
+valign = 1
+autowrap = true
+clip_text = true
+
+[node name="Limit" type="HBoxContainer" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_left = 275.0
+margin_top = 126.0
+margin_right = 825.0
+margin_bottom = 176.0
+rect_min_size = Vector2( 550, 50 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+custom_constants/separation = 15
+alignment = 1
+
+[node name="Submission" type="LineEdit" parent="EditPanel/question/VBox/Matching/Settings/Limit"]
+margin_left = 17.0
+margin_right = 292.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 275, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+max_length = 3
+placeholder_text = "SUBMISSIONS: 0"
+placeholder_alpha = 0.35
+
+[node name="Time" type="LineEdit" parent="EditPanel/question/VBox/Matching/Settings/Limit"]
+margin_left = 307.0
+margin_right = 532.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 225, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+max_length = 3
+placeholder_text = "TIME (s): 0"
+placeholder_alpha = 0.35
+
+[node name="Separator" type="Label" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 180.0
+margin_right = 1100.0
+margin_bottom = 220.0
+rect_min_size = Vector2( 1100, 40 )
+size_flags_horizontal = 4
+theme = SubResource( 64 )
+text = "------------------------------------------------------------------------------"
+align = 1
+valign = 1
+autowrap = true
+clip_text = true
+
+[node name="Score" type="LineEdit" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 224.0
+margin_right = 1100.0
+margin_bottom = 267.0
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "SCORE: 5"
+placeholder_alpha = 0.35
+
+[node name="Penalty" type="LineEdit" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 271.0
+margin_right = 1100.0
+margin_bottom = 314.0
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "PENALTY: 5"
+placeholder_alpha = 0.35
+
+[node name="Separator2" type="Label" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 318.0
+margin_right = 1100.0
+margin_bottom = 358.0
+rect_min_size = Vector2( 1100, 40 )
+size_flags_horizontal = 4
+theme = SubResource( 64 )
+text = "------------------------------------------------------------------------------"
+align = 1
+valign = 1
+autowrap = true
+clip_text = true
+
+[node name="Resubmission" type="Button" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 362.0
+margin_right = 1100.0
+margin_bottom = 437.0
+rect_min_size = Vector2( 1000, 75 )
+focus_mode = 0
+theme = SubResource( 68 )
+custom_styles/hover = SubResource( 67 )
+custom_styles/pressed = SubResource( 66 )
+custom_styles/normal = SubResource( 67 )
+toggle_mode = true
+pressed = true
+enabled_focus_mode = 0
+text = "RESUBMISSIONS"
+icon_align = 1
+
+[node name="MuitipleChoiceButton" type="Button" parent="EditPanel/question/VBox/Matching/Settings"]
+margin_top = 441.0
+margin_right = 1100.0
+margin_bottom = 516.0
+rect_min_size = Vector2( 1000, 75 )
+focus_mode = 0
+theme = SubResource( 68 )
+custom_styles/hover = SubResource( 67 )
+custom_styles/pressed = SubResource( 66 )
+custom_styles/normal = SubResource( 67 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "MULTIPLE CHOICE"
+icon_align = 1
+
+[node name="MultipleChoice" type="VBoxContainer" parent="EditPanel/question/VBox/Matching/Settings"]
+visible = false
+margin_top = 520.0
+margin_right = 1100.0
+margin_bottom = 570.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 2
+alignment = 1
+
+[node name="AnswerTemplate" type="HBoxContainer" parent="EditPanel/question/VBox/Matching/Settings/MultipleChoice"]
+visible = false
+margin_right = 1108.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 1100, 100 )
+rect_clip_content = true
+size_flags_horizontal = 6
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Answer" type="TextEdit" parent="EditPanel/question/VBox/Matching/Settings/MultipleChoice/AnswerTemplate"]
+margin_right = 950.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 950, 100 )
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = SubResource( 71 )
+custom_styles/normal = SubResource( 72 )
+smooth_scrolling = true
+wrap_enabled = true
+
+[node name="Validity" type="Button" parent="EditPanel/question/VBox/Matching/Settings/MultipleChoice/AnswerTemplate"]
+margin_left = 954.0
+margin_right = 1029.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 75, 75 )
+focus_mode = 0
+custom_styles/hover = SubResource( 83 )
+custom_styles/pressed = SubResource( 78 )
+custom_styles/normal = SubResource( 78 )
+enabled_focus_mode = 0
+icon = ExtResource( 27 )
+icon_align = 1
+expand_icon = true
+
+[node name="Delete" type="Button" parent="EditPanel/question/VBox/Matching/Settings/MultipleChoice/AnswerTemplate"]
+margin_left = 1033.0
+margin_right = 1108.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 75, 75 )
+focus_mode = 0
+custom_styles/hover = SubResource( 84 )
+custom_styles/pressed = SubResource( 81 )
+custom_styles/normal = SubResource( 81 )
+enabled_focus_mode = 0
+icon = ExtResource( 29 )
+icon_align = 1
+expand_icon = true
+
+[node name="NewAnswer" type="Button" parent="EditPanel/question/VBox/Matching/Settings/MultipleChoice"]
+margin_right = 1100.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 1100, 50 )
+focus_mode = 0
+theme = SubResource( 77 )
+custom_styles/hover = SubResource( 75 )
+custom_styles/pressed = SubResource( 74 )
+custom_styles/normal = SubResource( 74 )
+enabled_focus_mode = 0
+text = "+"
+icon_align = 1
+
+[node name="Blank" type="HBoxContainer" parent="EditPanel/question/VBox"]
+visible = false
+margin_top = 179.0
+margin_right = 1700.0
+margin_bottom = 829.0
+rect_min_size = Vector2( 1700, 650 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Content" type="VBoxContainer" parent="EditPanel/question/VBox/Blank"]
+margin_left = 42.0
+margin_right = 554.0
+margin_bottom = 647.0
+size_flags_horizontal = 5
+size_flags_vertical = 0
+alignment = 1
+
+[node name="MainLabel" type="Label" parent="EditPanel/question/VBox/Blank/Content"]
+margin_left = 130.0
+margin_right = 382.0
+margin_bottom = 66.0
+rect_min_size = Vector2( 250, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 42 )
+text = "Content"
+align = 1
+valign = 1
+
+[node name="ContentType" type="Button" parent="EditPanel/question/VBox/Blank/Content"]
+margin_top = 70.0
+margin_right = 512.0
+margin_bottom = 131.0
+focus_mode = 0
+theme = SubResource( 48 )
+custom_styles/hover = SubResource( 49 )
+custom_styles/pressed = SubResource( 53 )
+custom_styles/normal = SubResource( 49 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "text"
+icon_align = 1
+
+[node name="TextContent" type="TextEdit" parent="EditPanel/question/VBox/Blank/Content"]
+visible = false
+margin_top = 169.0
+margin_right = 720.0
+margin_bottom = 889.0
+rect_min_size = Vector2( 512, 512 )
+theme = SubResource( 46 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+
+[node name="ImageContent" type="TextureRect" parent="EditPanel/question/VBox/Blank/Content"]
+margin_top = 135.0
+margin_right = 512.0
+margin_bottom = 647.0
+rect_min_size = Vector2( 512, 512 )
+expand = true
+stretch_mode = 6
+
+[node name="Load" type="Button" parent="EditPanel/question/VBox/Blank/Content/ImageContent"]
+margin_left = 196.0
+margin_top = 10.0
+margin_right = 316.0
+margin_bottom = 55.0
+focus_mode = 0
+theme = SubResource( 55 )
+custom_styles/hover = SubResource( 57 )
+custom_styles/pressed = SubResource( 56 )
+custom_styles/normal = SubResource( 56 )
+enabled_focus_mode = 0
+text = "LOAD"
+icon_align = 1
+
+[node name="Settings" type="VBoxContainer" parent="EditPanel/question/VBox/Blank"]
+margin_left = 558.0
+margin_right = 1658.0
+margin_bottom = 516.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+alignment = 1
+
+[node name="MainLabel" type="Label" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_left = 406.0
+margin_right = 694.0
+margin_bottom = 66.0
+rect_min_size = Vector2( 250, 50 )
+size_flags_horizontal = 4
+theme = SubResource( 42 )
+text = "Settings"
+align = 1
+valign = 1
+
+[node name="LimitLabel" type="Label" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 70.0
+margin_right = 1100.0
+margin_bottom = 122.0
+rect_min_size = Vector2( 1100, 52 )
+size_flags_horizontal = 4
+theme = SubResource( 64 )
+text = "-----------------------------------LIMIT-----------------------------------"
+align = 1
+valign = 1
+autowrap = true
+clip_text = true
+
+[node name="Limit" type="HBoxContainer" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_left = 275.0
+margin_top = 126.0
+margin_right = 825.0
+margin_bottom = 176.0
+rect_min_size = Vector2( 550, 50 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+custom_constants/separation = 15
+alignment = 1
+
+[node name="Submission" type="LineEdit" parent="EditPanel/question/VBox/Blank/Settings/Limit"]
+margin_left = 17.0
+margin_right = 292.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 275, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+max_length = 3
+placeholder_text = "SUBMISSIONS: 0"
+placeholder_alpha = 0.35
+
+[node name="Time" type="LineEdit" parent="EditPanel/question/VBox/Blank/Settings/Limit"]
+margin_left = 307.0
+margin_right = 532.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 225, 50 )
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+max_length = 3
+placeholder_text = "TIME (s): 0"
+placeholder_alpha = 0.35
+
+[node name="Separator" type="Label" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 180.0
+margin_right = 1100.0
+margin_bottom = 220.0
+rect_min_size = Vector2( 1100, 40 )
+size_flags_horizontal = 4
+theme = SubResource( 64 )
+text = "------------------------------------------------------------------------------"
+align = 1
+valign = 1
+autowrap = true
+clip_text = true
+
+[node name="Score" type="LineEdit" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 224.0
+margin_right = 1100.0
+margin_bottom = 267.0
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "SCORE: 5"
+placeholder_alpha = 0.35
+
+[node name="Penalty" type="LineEdit" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 271.0
+margin_right = 1100.0
+margin_bottom = 314.0
+theme = SubResource( 59 )
+custom_styles/focus = SubResource( 52 )
+custom_styles/normal = SubResource( 51 )
+align = 1
+max_length = 3
+placeholder_text = "PENALTY: 5"
+placeholder_alpha = 0.35
+
+[node name="Separator2" type="Label" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 318.0
+margin_right = 1100.0
+margin_bottom = 358.0
+rect_min_size = Vector2( 1100, 40 )
+size_flags_horizontal = 4
+theme = SubResource( 64 )
+text = "------------------------------------------------------------------------------"
+align = 1
+valign = 1
+autowrap = true
+clip_text = true
+
+[node name="Resubmission" type="Button" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 362.0
+margin_right = 1100.0
+margin_bottom = 437.0
+rect_min_size = Vector2( 1000, 75 )
+focus_mode = 0
+theme = SubResource( 68 )
+custom_styles/hover = SubResource( 67 )
+custom_styles/pressed = SubResource( 66 )
+custom_styles/normal = SubResource( 67 )
+toggle_mode = true
+pressed = true
+enabled_focus_mode = 0
+text = "RESUBMISSIONS"
+icon_align = 1
+
+[node name="MuitipleChoiceButton" type="Button" parent="EditPanel/question/VBox/Blank/Settings"]
+margin_top = 441.0
+margin_right = 1100.0
+margin_bottom = 516.0
+rect_min_size = Vector2( 1000, 75 )
+focus_mode = 0
+theme = SubResource( 68 )
+custom_styles/hover = SubResource( 67 )
+custom_styles/pressed = SubResource( 66 )
+custom_styles/normal = SubResource( 67 )
+toggle_mode = true
+enabled_focus_mode = 0
+text = "MULTIPLE CHOICE"
+icon_align = 1
+
+[node name="MultipleChoice" type="VBoxContainer" parent="EditPanel/question/VBox/Blank/Settings"]
+visible = false
+margin_top = 520.0
+margin_right = 1100.0
+margin_bottom = 570.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 2
+alignment = 1
+
+[node name="AnswerTemplate" type="HBoxContainer" parent="EditPanel/question/VBox/Blank/Settings/MultipleChoice"]
+visible = false
+margin_right = 1108.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 1100, 100 )
+rect_clip_content = true
+size_flags_horizontal = 6
+size_flags_vertical = 0
+alignment = 1
+
+[node name="Answer" type="TextEdit" parent="EditPanel/question/VBox/Blank/Settings/MultipleChoice/AnswerTemplate"]
+margin_right = 950.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 950, 100 )
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme = SubResource( 71 )
+custom_styles/normal = SubResource( 72 )
+smooth_scrolling = true
+wrap_enabled = true
+
+[node name="Validity" type="Button" parent="EditPanel/question/VBox/Blank/Settings/MultipleChoice/AnswerTemplate"]
+margin_left = 954.0
+margin_right = 1029.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 75, 75 )
+focus_mode = 0
+custom_styles/hover = SubResource( 83 )
+custom_styles/pressed = SubResource( 78 )
+custom_styles/normal = SubResource( 78 )
+enabled_focus_mode = 0
+icon = ExtResource( 27 )
+icon_align = 1
+expand_icon = true
+
+[node name="Delete" type="Button" parent="EditPanel/question/VBox/Blank/Settings/MultipleChoice/AnswerTemplate"]
+margin_left = 1033.0
+margin_right = 1108.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 75, 75 )
+focus_mode = 0
+custom_styles/hover = SubResource( 84 )
+custom_styles/pressed = SubResource( 81 )
+custom_styles/normal = SubResource( 81 )
+enabled_focus_mode = 0
+icon = ExtResource( 29 )
+icon_align = 1
+expand_icon = true
+
+[node name="NewAnswer" type="Button" parent="EditPanel/question/VBox/Blank/Settings/MultipleChoice"]
+margin_right = 1100.0
+margin_bottom = 50.0
+rect_min_size = Vector2( 1100, 50 )
+focus_mode = 0
+theme = SubResource( 77 )
+custom_styles/hover = SubResource( 75 )
+custom_styles/pressed = SubResource( 74 )
+custom_styles/normal = SubResource( 74 )
+enabled_focus_mode = 0
+text = "+"
+icon_align = 1
+
+[node name="intro" type="ScrollContainer" parent="EditPanel"]
+visible = false
+margin_right = 1750.0
+margin_bottom = 500.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="VBox" type="VBoxContainer" parent="EditPanel/intro"]
+margin_left = 25.0
+margin_right = 1725.0
+margin_bottom = 500.0
+grow_horizontal = 2
+grow_vertical = 2
+rect_min_size = Vector2( 1700, 500 )
+size_flags_horizontal = 6
+size_flags_vertical = 0
+custom_constants/separation = 5
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="EditPanel/intro/VBox"]
+margin_left = 725.0
+margin_top = 17.0
+margin_right = 975.0
+margin_bottom = 92.0
+rect_min_size = Vector2( 250, 75 )
+size_flags_horizontal = 4
+theme = SubResource( 42 )
+text = "TITLE"
+align = 1
+valign = 1
+
+[node name="TitleBox" type="LineEdit" parent="EditPanel/intro/VBox"]
+margin_top = 97.0
+margin_right = 1700.0
+margin_bottom = 172.0
+rect_min_size = Vector2( 1500, 75 )
+theme = SubResource( 46 )
+custom_colors/font_color_selected = Color( 0.603922, 0.603922, 0.603922, 1 )
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_styles/focus = SubResource( 44 )
+custom_styles/normal = SubResource( 44 )
+align = 1
+
+[node name="SubtitleLabel" type="Label" parent="EditPanel/intro/VBox"]
+margin_left = 706.0
+margin_top = 177.0
+margin_right = 994.0
+margin_bottom = 252.0
+rect_min_size = Vector2( 250, 75 )
+size_flags_horizontal = 4
+theme = SubResource( 42 )
+text = "SUBTITLE"
+align = 1
+valign = 1
+
+[node name="SubtitleBox" type="TextEdit" parent="EditPanel/intro/VBox"]
+margin_top = 257.0
+margin_right = 1700.0
+margin_bottom = 482.0
+rect_min_size = Vector2( 1500, 225 )
+theme = SubResource( 46 )
+custom_styles/focus = SubResource( 43 )
+custom_styles/normal = SubResource( 44 )
+smooth_scrolling = true
+v_scroll_speed = 10.0
+wrap_enabled = true
+
+[node name="LoadCircle" type="Sprite" parent="."]
+visible = false
+modulate = Color( 0, 0, 0, 1 )
+position = Vector2( 960, 540 )
+scale = Vector2( 3, 3 )
+texture = ExtResource( 31 )

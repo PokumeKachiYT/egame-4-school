@@ -1,0 +1,122 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=4
+
+_global_script_classes=[ {
+"base": "Resource",
+"class": "DataLoader",
+"language": "GDScript",
+"path": "res://res/data.gd"
+}, {
+"base": "Node",
+"class": "ServerAdvertiser",
+"language": "GDScript",
+"path": "res://addons/LANServerBroadcast/server_advertiser/ServerAdvertiser.gd"
+}, {
+"base": "Node",
+"class": "ServerListener",
+"language": "GDScript",
+"path": "res://addons/LANServerBroadcast/server_listener/ServerListener.gd"
+}, {
+"base": "Resource",
+"class": "block",
+"language": "GDScript",
+"path": "res://res/block.gd"
+}, {
+"base": "Resource",
+"class": "intro_type",
+"language": "GDScript",
+"path": "res://res/intro_type.gd"
+}, {
+"base": "Resource",
+"class": "question_type",
+"language": "GDScript",
+"path": "res://res/question_type.gd"
+} ]
+_global_script_class_icons={
+"DataLoader": "",
+"ServerAdvertiser": "res://addons/LANServerBroadcast/server_advertiser/server_advertiser.png",
+"ServerListener": "res://addons/LANServerBroadcast/server_listener/server_listener.png",
+"block": "",
+"intro_type": "",
+"question_type": ""
+}
+
+[application]
+
+config/name="eGame4School"
+run/main_scene="res://scenes/menus/MainMenu.tscn"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="eGame"
+boot_splash/show_image=false
+boot_splash/bg_color=Color( 0, 0, 0, 1 )
+config/icon="res://icon.png"
+
+[autoload]
+
+Main="*res://res/main.gd"
+
+[display]
+
+window/size/width=1920
+window/size/height=1080
+window/dpi/allow_hidpi=true
+window/vsync/use_vsync=false
+window/per_pixel_transparency/allowed=true
+window/per_pixel_transparency/enabled=true
+mouse_cursor/custom_image="res://assets/cursor.png"
+window/stretch/mode="viewport"
+window/stretch/aspect="keep"
+
+[editor_plugins]
+
+enabled=PoolStringArray( "res://addons/LANServerBroadcast/plugin.cfg" )
+
+[gui]
+
+common/drop_mouse_on_gui_input_disabled=true
+
+[input]
+
+lmb={
+"deadzone": 0.5,
+"events": [ Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"button_mask":0,"position":Vector2( 0, 0 ),"global_position":Vector2( 0, 0 ),"factor":1.0,"button_index":1,"pressed":false,"doubleclick":false,"script":null)
+ ]
+}
+rmb={
+"deadzone": 0.5,
+"events": [ Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"button_mask":0,"position":Vector2( 0, 0 ),"global_position":Vector2( 0, 0 ),"factor":1.0,"button_index":2,"pressed":false,"doubleclick":false,"script":null)
+ ]
+}
+focus={
+"deadzone": 0.5,
+"events": [ Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":0,"physical_scancode":70,"unicode":0,"echo":false,"script":null)
+ ]
+}
+ctrl={
+"deadzone": 0.5,
+"events": [ Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":0,"physical_scancode":16777238,"unicode":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":false,"meta":false,"command":false,"pressed":false,"scancode":16777238,"physical_scancode":0,"unicode":0,"echo":false,"script":null)
+ ]
+}
+save={
+"deadzone": 0.5,
+"events": [ Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":true,"meta":false,"command":true,"pressed":false,"scancode":0,"physical_scancode":83,"unicode":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":0,"alt":false,"shift":false,"control":true,"meta":false,"command":true,"pressed":false,"scancode":83,"physical_scancode":0,"unicode":0,"echo":false,"script":null)
+ ]
+}
+
+[physics]
+
+common/enable_pause_aware_picking=true
+
+[rendering]
+
+environment/default_clear_color=Color( 0.0627451, 0.768627, 0.988235, 1 )
+environment/default_environment="res://default_env.tres"

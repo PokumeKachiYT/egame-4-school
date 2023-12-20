@@ -1,0 +1,317 @@
+[gd_scene load_steps=28 format=2]
+
+[ext_resource path="res://assets/Global.tscn" type="PackedScene" id=4]
+[ext_resource path="res://fonts/open-sans/Light.ttf" type="DynamicFontData" id=6]
+[ext_resource path="res://fonts/andika-basic/Regular.ttf" type="DynamicFontData" id=7]
+[ext_resource path="res://addons/LANServerBroadcast/server_listener/ServerListener.gd" type="Script" id=10]
+[ext_resource path="res://scripts/menus/BackgroundRotation.gd" type="Script" id=12]
+[ext_resource path="res://scripts/menus/PlayMenuScript.gd" type="Script" id=13]
+[ext_resource path="res://sprites/pattern.svg" type="Texture" id=15]
+[ext_resource path="res://scripts/menus/JoinButton.gd" type="Script" id=17]
+[ext_resource path="res://fonts/courier-prime/Bold.ttf" type="DynamicFontData" id=18]
+[ext_resource path="res://scenes/Environment.tscn" type="PackedScene" id=20]
+[ext_resource path="res://sprites/circle.svg" type="Texture" id=23]
+
+[sub_resource type="Shader" id=99]
+code = "/* 
+Earthbound battle backgrounds shader with scrolling effect and palette cycling like in the original game.
+@retr0_dev
+	
+Apply the shader to a TextureRect or a Sprite. Use a texture with some shapes in a transparent background for best results.
+You can then use a ColorRect or another method to paint the background.
+You can use the shader on multiple TextureRects and obtain a double-buffer effect tweaking the values for each one, remember to Make Unique the shader material.
+*/
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float amplitude = 0.075;
+uniform float frequency = 10.0;
+uniform float speed = 2.0;
+uniform float amplitude_vertical = 0.0;
+uniform float frequency_vertical = 0.0;
+uniform float speed_vertical = 0.0;
+uniform vec2 scroll_direction = vec2(0.0, 0.0);
+uniform float scrolling_speed = 0.08;
+uniform bool enable_palette_cycling = false;
+uniform sampler2D palette;
+uniform float palette_speed = 0.1;
+
+uniform sampler2D gradient: hint_black;
+uniform float mix_amount;
+
+float random (vec2 uv) {
+    return fract(sin(dot(uv.xy,
+        vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+
+void fragment() {
+	float diff_x = amplitude * sin((frequency * UV.y) + (speed * TIME));// * random(UV);
+	float diff_y = amplitude_vertical * sin((frequency_vertical * UV.y)  + (speed_vertical * TIME)) * random(UV);
+	vec2 scroll = scroll_direction * TIME * scrolling_speed;
+	vec4 tex = texture(TEXTURE, vec2(UV.x + diff_x, UV.y + diff_y) + scroll);
+	float palette_swap = mod(tex.r - TIME * palette_speed, 1.0);
+	
+	if (enable_palette_cycling)
+	{
+		COLOR = vec4(texture(palette, vec2(palette_swap, 0)).rgb, tex.a);
+	}
+	else COLOR = tex;
+}"
+
+[sub_resource type="ShaderMaterial" id=80]
+shader = SubResource( 99 )
+shader_param/amplitude = 0.0
+shader_param/frequency = 16.0
+shader_param/speed = 1.0
+shader_param/amplitude_vertical = 0.0
+shader_param/frequency_vertical = 0.0
+shader_param/speed_vertical = 0.0
+shader_param/scroll_direction = Vector2( 5, 1 )
+shader_param/scrolling_speed = 0.025
+shader_param/enable_palette_cycling = false
+shader_param/palette_speed = 0.1
+shader_param/mix_amount = 1.0
+
+[sub_resource type="DynamicFont" id=77]
+size = 50
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+extra_spacing_top = -15
+extra_spacing_bottom = -15
+font_data = ExtResource( 6 )
+
+[sub_resource type="Theme" id=78]
+default_font = SubResource( 77 )
+
+[sub_resource type="StyleBoxFlat" id=11]
+bg_color = Color( 0.34902, 0.654902, 0.454902, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="DynamicFont" id=68]
+size = 75
+outline_size = 2
+outline_color = Color( 0, 0, 0, 0.784314 )
+use_filter = true
+extra_spacing_top = 10
+font_data = ExtResource( 18 )
+
+[sub_resource type="Theme" id=69]
+default_font = SubResource( 68 )
+
+[sub_resource type="StyleBoxFlat" id=70]
+bg_color = Color( 0.823529, 0.537255, 0, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=87]
+bg_color = Color( 0.686275, 0.447059, 0, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=66]
+bg_color = Color( 0, 0.576471, 0.654902, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=74]
+bg_color = Color( 0.392157, 0.333333, 0.266667, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 5
+corner_radius_top_right = 5
+corner_radius_bottom_right = 5
+corner_radius_bottom_left = 5
+
+[sub_resource type="StyleBoxFlat" id=65]
+bg_color = Color( 0.756863, 0.470588, 0.160784, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=64]
+bg_color = Color( 0.745098, 0.411765, 0.054902, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="GDScript" id=75]
+resource_name = "Variables"
+script/source = "extends Button
+
+export var ip: String
+export var port: String
+"
+
+[sub_resource type="DynamicFont" id=62]
+size = 50
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 7 )
+
+[sub_resource type="Theme" id=63]
+default_font = SubResource( 62 )
+
+[node name="MainMenu" type="Node2D"]
+script = ExtResource( 13 )
+
+[node name="Global" parent="." instance=ExtResource( 4 )]
+
+[node name="Camera" type="Camera2D" parent="."]
+rotating = true
+current = true
+
+[node name="Environment" parent="." instance=ExtResource( 20 )]
+
+[node name="MainBackground" type="Sprite" parent="."]
+material = SubResource( 80 )
+texture = ExtResource( 15 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 2500, 7500 )
+script = ExtResource( 12 )
+
+[node name="Name" type="LineEdit" parent="."]
+margin_left = -950.0
+margin_top = -535.0
+margin_right = 950.0
+margin_bottom = -470.0
+theme = SubResource( 78 )
+custom_styles/focus = SubResource( 11 )
+custom_styles/normal = SubResource( 11 )
+align = 1
+max_length = 100
+placeholder_text = "USERNAME"
+
+[node name="Join" type="Button" parent="."]
+margin_left = -450.0
+margin_top = -455.0
+margin_right = -50.0
+margin_bottom = -355.0
+focus_mode = 0
+theme = SubResource( 69 )
+custom_colors/font_color = Color( 1, 0.721569, 0.721569, 1 )
+custom_colors/font_color_hover = Color( 1, 0.615686, 0.615686, 1 )
+custom_colors/font_color_pressed = Color( 1, 0.819608, 0.819608, 1 )
+custom_styles/hover = SubResource( 70 )
+custom_styles/pressed = SubResource( 87 )
+custom_styles/normal = SubResource( 66 )
+enabled_focus_mode = 0
+text = "THAM GIA"
+clip_text = true
+icon_align = 1
+script = ExtResource( 17 )
+
+[node name="Spectate" type="Button" parent="."]
+margin_left = 50.0
+margin_top = -455.0
+margin_right = 450.0
+margin_bottom = -355.0
+focus_mode = 0
+theme = SubResource( 69 )
+custom_colors/font_color = Color( 1, 0.721569, 0.721569, 1 )
+custom_colors/font_color_hover = Color( 1, 0.615686, 0.615686, 1 )
+custom_colors/font_color_pressed = Color( 1, 0.819608, 0.819608, 1 )
+custom_styles/hover = SubResource( 70 )
+custom_styles/pressed = SubResource( 87 )
+custom_styles/normal = SubResource( 66 )
+enabled_focus_mode = 0
+text = "XEM"
+clip_text = true
+icon_align = 1
+script = ExtResource( 17 )
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+margin_left = -950.0
+margin_top = -350.0
+margin_right = 950.0
+margin_bottom = 535.0
+custom_styles/bg = SubResource( 74 )
+scroll_horizontal_enabled = false
+
+[node name="VBox" type="VBoxContainer" parent="Scroll"]
+margin_left = 5.0
+margin_top = 5.0
+margin_right = 1883.0
+margin_bottom = 890.0
+rect_min_size = Vector2( 1350, 885 )
+size_flags_horizontal = 15
+size_flags_vertical = 15
+custom_constants/separation = 5
+alignment = 1
+
+[node name="Template" type="Button" parent="Scroll/VBox"]
+visible = false
+margin_top = 367.0
+margin_right = 1878.0
+margin_bottom = 517.0
+rect_min_size = Vector2( 1878, 150 )
+focus_mode = 0
+custom_styles/hover = SubResource( 65 )
+custom_styles/pressed = SubResource( 64 )
+custom_styles/normal = SubResource( 64 )
+enabled_focus_mode = 0
+script = SubResource( 75 )
+
+[node name="Text" type="Label" parent="Scroll/VBox/Template"]
+margin_right = 1400.0
+margin_bottom = 60.0
+rect_min_size = Vector2( 1878, 150 )
+theme = SubResource( 63 )
+text = "sdffdsfdsfdsfdsf"
+align = 1
+valign = 1
+
+[node name="ServerListener" type="Node" parent="."]
+script = ExtResource( 10 )
+
+[node name="LoadCircle" type="Sprite" parent="."]
+visible = false
+modulate = Color( 0, 0, 0, 1 )
+scale = Vector2( 3, 3 )
+texture = ExtResource( 23 )

@@ -1,0 +1,726 @@
+[gd_scene load_steps=46 format=2]
+
+[ext_resource path="res://scripts/menus/ScrollBarInit.gd" type="Script" id=1]
+[ext_resource path="res://assets/Global.tscn" type="PackedScene" id=4]
+[ext_resource path="res://scripts/menus/InputBoxShadowScript.gd" type="Script" id=5]
+[ext_resource path="res://fonts/andika-basic/Regular.ttf" type="DynamicFontData" id=7]
+[ext_resource path="res://sprites/operations/edit.svg" type="Texture" id=8]
+[ext_resource path="res://sprites/operations/delete.svg" type="Texture" id=11]
+[ext_resource path="res://scripts/menus/BackgroundRotation.gd" type="Script" id=12]
+[ext_resource path="res://scripts/menus/CreateMenuScript.gd" type="Script" id=13]
+[ext_resource path="res://fonts/clear-sans/ClearSans-Bold.ttf" type="DynamicFontData" id=14]
+[ext_resource path="res://sprites/pattern.svg" type="Texture" id=15]
+[ext_resource path="res://sprites/operations/play.svg" type="Texture" id=16]
+[ext_resource path="res://fonts/courier-new/Bold.ttf" type="DynamicFontData" id=19]
+[ext_resource path="res://scenes/Environment.tscn" type="PackedScene" id=20]
+[ext_resource path="res://fonts/andika-basic/Bold.ttf" type="DynamicFontData" id=21]
+[ext_resource path="res://sprites/operations/add.svg" type="Texture" id=22]
+[ext_resource path="res://sprites/circle.svg" type="Texture" id=23]
+
+[sub_resource type="Shader" id=101]
+code = "/* 
+Earthbound battle backgrounds shader with scrolling effect and palette cycling like in the original game.
+@retr0_dev
+	
+Apply the shader to a TextureRect or a Sprite. Use a texture with some shapes in a transparent background for best results.
+You can then use a ColorRect or another method to paint the background.
+You can use the shader on multiple TextureRects and obtain a double-buffer effect tweaking the values for each one, remember to Make Unique the shader material.
+*/
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float amplitude = 0.075;
+uniform float frequency = 10.0;
+uniform float speed = 2.0;
+uniform float amplitude_vertical = 0.0;
+uniform float frequency_vertical = 0.0;
+uniform float speed_vertical = 0.0;
+uniform vec2 scroll_direction = vec2(0.0, 0.0);
+uniform float scrolling_speed = 0.08;
+uniform bool enable_palette_cycling = false;
+uniform sampler2D palette;
+uniform float palette_speed = 0.1;
+
+uniform sampler2D gradient: hint_black;
+uniform float mix_amount;
+
+float random (vec2 uv) {
+    return fract(sin(dot(uv.xy,
+        vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+
+void fragment() {
+	float diff_x = amplitude * sin((frequency * UV.y) + (speed * TIME));// * random(UV);
+	float diff_y = amplitude_vertical * sin((frequency_vertical * UV.y)  + (speed_vertical * TIME)) * random(UV);
+	vec2 scroll = vec2(sin(TIME) * 0.1,scroll_direction.y * TIME * scrolling_speed);
+	vec4 tex = texture(TEXTURE, vec2(UV.x + diff_x, UV.y + diff_y) + scroll);
+	float palette_swap = mod(tex.r - TIME * palette_speed, 1.0);
+	
+	if (enable_palette_cycling)
+	{
+		COLOR = vec4(texture(palette, vec2(palette_swap, 0)).rgb, tex.a);
+	}
+	else COLOR = tex;
+}"
+
+[sub_resource type="ShaderMaterial" id=102]
+shader = SubResource( 101 )
+shader_param/amplitude = 0.0
+shader_param/frequency = 16.0
+shader_param/speed = 1.0
+shader_param/amplitude_vertical = 0.0
+shader_param/frequency_vertical = 0.0
+shader_param/speed_vertical = 0.0
+shader_param/scroll_direction = Vector2( -15, -20 )
+shader_param/scrolling_speed = 0.025
+shader_param/enable_palette_cycling = false
+shader_param/palette_speed = 0.1
+shader_param/mix_amount = 1.0
+
+[sub_resource type="DynamicFont" id=41]
+size = 50
+font_data = ExtResource( 21 )
+
+[sub_resource type="Theme" id=42]
+default_font = SubResource( 41 )
+
+[sub_resource type="StyleBoxFlat" id=81]
+bg_color = Color( 1, 0, 0, 0.392157 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=40]
+bg_color = Color( 1, 0.328125, 0, 0.784314 )
+border_width_top = 5
+border_color = Color( 1, 1, 1, 1 )
+
+[sub_resource type="StyleBoxEmpty" id=39]
+
+[sub_resource type="DynamicFont" id=97]
+size = 50
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+extra_spacing_top = -10
+extra_spacing_bottom = -10
+font_data = ExtResource( 7 )
+
+[sub_resource type="Theme" id=98]
+default_font = SubResource( 97 )
+Label/colors/font_color_shadow = Color( 0, 0, 0, 1 )
+Label/constants/shadow_as_outline = 0
+Label/constants/shadow_offset_x = 3
+Label/constants/shadow_offset_y = 3
+
+[sub_resource type="StyleBoxEmpty" id=43]
+
+[sub_resource type="StyleBoxFlat" id=20]
+bg_color = Color( 0.784314, 0.490196, 0, 0.490196 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id=26]
+bg_color = Color( 0.380392, 0.0745098, 0, 0.392157 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="DynamicFont" id=82]
+size = 50
+outline_color = Color( 0, 0, 0, 0.588235 )
+use_filter = true
+font_data = ExtResource( 14 )
+
+[sub_resource type="Theme" id=83]
+default_font = SubResource( 82 )
+
+[sub_resource type="StyleBoxEmpty" id=92]
+
+[sub_resource type="StyleBoxEmpty" id=93]
+
+[sub_resource type="DynamicFont" id=72]
+size = 128
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+font_data = ExtResource( 19 )
+
+[sub_resource type="Theme" id=73]
+default_font = SubResource( 72 )
+
+[sub_resource type="StyleBoxFlat" id=71]
+bg_color = Color( 0, 0.666667, 0.368627, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id=44]
+bg_color = Color( 0, 0.470588, 0.258824, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id=100]
+bg_color = Color( 0, 0.501961, 0.278431, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 1, 1, 1, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 10
+
+[sub_resource type="GDScript" id=76]
+resource_name = "NewButton"
+script/source = "extends Button
+
+var tween = Tween.new()
+onready var root = get_parent().get_parent().get_parent()
+onready var input_box = get_parent().get_parent().get_node(\"NewGame/Input\")
+
+const banned_words = ['.',':','@','/','\"','%']
+
+func on_click() -> void:
+	if root.paused:
+		return
+	var orig_file_name:String = input_box.text
+	var index = 0
+	for letter in orig_file_name:
+		if letter in banned_words:
+			orig_file_name = orig_file_name.substr(0,index) + orig_file_name.right(index + 1)
+			index -= 1
+		index += 1
+	if orig_file_name == \"\":
+		return
+	
+	var file_name = orig_file_name
+	index = 1
+	var file = DataLoader.new()
+	while file.save_exists(\"user://contests/\" + file_name + \".res\"):
+		file_name = orig_file_name + \" (\" + str(index) + \")\"
+		index += 1
+	file.save_data(\"user://contests/\" + file_name + \".res\")
+	root.add_game(file_name)
+
+func on_hover(is_hovering) -> void:
+	tween.remove(self,\"rect_position\")
+	tween.interpolate_property(
+		self,'rect_position:y',
+		rect_position.y,-5 if is_hovering else 0,
+		.05,Tween.TRANS_QUART,Tween.EASE_OUT
+	)
+	tween.start()
+
+func _ready():
+	add_child(tween)
+	
+	connect('mouse_entered',self,\"on_hover\",[true])
+	connect('mouse_exited',self,\"on_hover\",[false])
+	connect('pressed',self,\"on_click\")
+
+
+"
+
+[sub_resource type="Shader" id=88]
+code = "shader_type canvas_item;
+render_mode unshaded;
+
+uniform sampler2D gradient: hint_black;
+
+void fragment() {
+	vec4 input_color = texture(TEXTURE,UV);
+	//float grayscale_value = dot(input_color.rgb,vec3(0.299,0.587,0.114));
+	vec4 sampled_color = texture(gradient,UV);//texture(gradient,vec2(grayscale_value,0.0)).rgb;
+	
+	//COLOR.rgb = mix(input_color.rgb,sampled_color,mix_amount);
+	COLOR = sampled_color;
+	COLOR.a = input_color.a;
+}"
+
+[sub_resource type="Gradient" id=90]
+colors = PoolColorArray( 1, 0.46875, 0, 1, 0.838867, 0.457117, 0, 1 )
+
+[sub_resource type="GradientTexture" id=91]
+gradient = SubResource( 90 )
+
+[sub_resource type="ShaderMaterial" id=89]
+shader = SubResource( 88 )
+shader_param/gradient = SubResource( 91 )
+
+[sub_resource type="GDScript" id=47]
+resource_name = "RunButton"
+script/source = "extends Button
+
+onready var tween = Tween.new()
+onready var root = get_parent().get_parent().get_parent()
+onready var camera: Camera2D = root.get_node(\"Camera\")
+onready var load_circle: Sprite = root.get_node('LoadCircle')
+
+func on_click() -> void:
+	if root.paused:
+		return
+	var selected_game = ProjectSettings.get(\"selected_game\")
+	if selected_game == null:
+		return
+	root.paused = true
+	
+	load_circle.show()
+	
+	tween.interpolate_property(
+		load_circle,'scale',
+		load_circle.scale,Vector2(3,3),
+		.5,Tween.TRANS_EXPO,Tween.EASE_IN
+	)
+	tween.start()
+
+	yield(get_tree().create_timer(.6),\"timeout\")
+	
+	get_tree().change_scene(\"res://scenes/host/MainScene.tscn\")
+
+func on_hover(is_hovering) -> void:
+	tween.remove(self,\"rect_position:y\")
+	tween.interpolate_property(
+		self,\"rect_position:y\",
+		rect_position.y,-5 if is_hovering else 0,
+		.05,Tween.TRANS_SINE,Tween.EASE_IN_OUT
+	)
+	tween.start()
+
+func _ready():
+	add_child(tween)
+	
+	connect('mouse_entered',self,\"on_hover\",[true])
+	connect('mouse_exited',self,\"on_hover\",[false])
+	connect('pressed',self,\"on_click\")
+"
+
+[sub_resource type="GDScript" id=45]
+resource_name = "EditButton"
+script/source = "extends Button
+
+onready var tween = Tween.new()
+onready var root = get_parent().get_parent().get_parent()
+onready var camera: Camera2D = root.get_node(\"Camera\")
+onready var load_circle: Sprite = root.get_node('LoadCircle')
+
+func on_click() -> void:
+	if root.paused:
+		return
+	
+	var selected_game = ProjectSettings.get(\"selected_game\")
+	if selected_game == null:
+		return
+	root.paused = true
+	tween.remove(load_circle,'scale')
+	tween.interpolate_property(
+		load_circle,'scale',
+		load_circle.scale,Vector2(3,3),
+		.5,Tween.TRANS_EXPO,Tween.EASE_IN
+	)
+	tween.start()
+	
+	yield(get_tree().create_timer(.6),'timeout')
+	get_tree().change_scene(\"res://scenes/game_editor/MainScene.tscn\")
+
+func on_hover(is_hovering) -> void:
+	tween.remove(self,\"rect_position:y\")
+	tween.interpolate_property(
+		self,\"rect_position:y\",
+		rect_position.y,-5 if is_hovering else 0,
+		.05,Tween.TRANS_SINE,Tween.EASE_IN_OUT
+	)
+	tween.start()
+
+func _ready():
+	add_child(tween)
+	
+	connect('mouse_entered',self,\"on_hover\",[true])
+	connect('mouse_exited',self,\"on_hover\",[false])
+	connect('pressed',self,\"on_click\")
+"
+
+[sub_resource type="GDScript" id=46]
+resource_name = "DeleteButton"
+script/source = "extends Button
+
+onready var create_game_frame = get_parent().get_parent()
+var tween = Tween.new()
+onready var root = create_game_frame.get_parent()
+
+var directory = Directory.new()
+
+onready var icon_image = get_node(\"Icon\")
+
+var target = ''
+
+func on_block_change():
+	target = ''
+	tween.remove(icon_image,'self_modulate')
+	tween.interpolate_property(
+		icon_image,'self_modulate',
+		icon_image.self_modulate,Color(1,1,1),
+		.5,Tween.TRANS_LINEAR
+	)
+	tween.start()
+
+var no = false
+
+func on_click() -> void:
+	if root.paused or no:
+		return
+	no = true
+	var selected_game = ProjectSettings.get(\"selected_game\")
+	if selected_game == null:
+		return
+	tween.remove(icon_image,'self_modulate')
+	
+	if target == selected_game:
+		var selected_button = create_game_frame.get_node('Background/Scroll/VBox').get_node_or_null(selected_game)
+		selected_button.queue_free()
+		
+		directory.remove(\"user://contests/\" + selected_game + \".res\")
+		ProjectSettings.set(\"selected_game\",null)
+		
+		target = ''
+		
+		tween.interpolate_property(
+			icon_image,'self_modulate',
+			icon_image.self_modulate,Color(1,1,1),
+			.5,Tween.TRANS_LINEAR
+		)
+		tween.start()
+		
+		yield(get_tree().create_timer(.5),'timeout')
+	else:
+		tween.interpolate_property(
+			icon_image,'self_modulate',
+			icon_image.self_modulate,Color(4,0,0),
+			1,Tween.TRANS_LINEAR
+		)
+		tween.start()
+		
+		yield(get_tree().create_timer(1),\"timeout\")
+		
+		target = selected_game
+	
+	no = false
+
+func on_hover(is_hovering) -> void:
+	tween.remove(self,\"rect_position:y\")
+	tween.interpolate_property(
+		self,\"rect_position:y\",
+		rect_position.y,-5 if is_hovering else 0,
+		.05,Tween.TRANS_LINEAR
+	)
+	tween.start()
+
+func _ready():
+	add_child(tween)
+	
+	connect('mouse_entered',self,\"on_hover\",[true])
+	connect('mouse_exited',self,\"on_hover\",[false])
+	connect('pressed',self,\"on_click\")
+	
+	root.connect('block_changed',self,'on_block_change')
+"
+
+[node name="MainMenu" type="Node2D"]
+script = ExtResource( 13 )
+
+[node name="Global" parent="." instance=ExtResource( 4 )]
+
+[node name="MainBackground" type="Sprite" parent="."]
+material = SubResource( 102 )
+texture = ExtResource( 15 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 2500, 7500 )
+script = ExtResource( 12 )
+
+[node name="Environment" parent="." instance=ExtResource( 20 )]
+
+[node name="Camera" type="Camera2D" parent="."]
+rotating = true
+current = true
+
+[node name="MainUI" type="Node2D" parent="."]
+position = Vector2( 0, -600 )
+
+[node name="MainBackground" type="Panel" parent="MainUI"]
+margin_left = -1000.0
+margin_top = 100.0
+margin_right = 1000.0
+margin_bottom = 1100.0
+theme = SubResource( 42 )
+custom_styles/panel = SubResource( 81 )
+
+[node name="Background" type="Panel" parent="MainUI"]
+margin_left = -960.0
+margin_top = 365.0
+margin_right = 960.0
+margin_bottom = 1095.0
+rect_clip_content = true
+theme = SubResource( 42 )
+custom_styles/panel = SubResource( 40 )
+
+[node name="Scroll" type="ScrollContainer" parent="MainUI/Background"]
+margin_left = 20.0
+margin_top = 15.0
+margin_right = 1900.0
+margin_bottom = 735.0
+grow_horizontal = 2
+grow_vertical = 2
+rect_clip_content = false
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_styles/bg = SubResource( 39 )
+scroll_horizontal_enabled = false
+script = ExtResource( 1 )
+
+[node name="VBox" type="VBoxContainer" parent="MainUI/Background/Scroll"]
+margin_right = 1850.0
+margin_bottom = 720.0
+rect_min_size = Vector2( 1850, 720 )
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 15
+
+[node name="Template" type="Label" parent="MainUI/Background/Scroll/VBox"]
+visible = false
+margin_top = 296.0
+margin_right = 1850.0
+margin_bottom = 423.0
+rect_min_size = Vector2( 1800, 100 )
+mouse_filter = 0
+theme = SubResource( 98 )
+custom_styles/normal = SubResource( 43 )
+valign = 1
+autowrap = true
+
+[node name="Background" type="Panel" parent="MainUI/Background/Scroll/VBox/Template"]
+show_behind_parent = true
+margin_left = -10.0
+margin_right = 1850.0
+margin_bottom = 100.0
+mouse_filter = 2
+custom_styles/panel = SubResource( 20 )
+
+[node name="NewGame" type="Panel" parent="MainUI"]
+margin_left = -950.0
+margin_top = 150.0
+margin_right = 100.0
+margin_bottom = 350.0
+custom_styles/panel = SubResource( 26 )
+
+[node name="Input" type="TextEdit" parent="MainUI/NewGame"]
+margin_left = 10.0
+margin_top = 10.0
+margin_right = 1040.0
+margin_bottom = 190.0
+grow_vertical = 2
+rect_clip_content = true
+theme = SubResource( 83 )
+custom_styles/focus = SubResource( 92 )
+custom_styles/normal = SubResource( 93 )
+smooth_scrolling = true
+wrap_enabled = true
+
+[node name="Shadow" type="TextEdit" parent="MainUI/NewGame/Input"]
+modulate = Color( 0, 0, 0, 1 )
+show_behind_parent = true
+margin_left = 2.0
+margin_top = 5.0
+margin_right = 1042.0
+margin_bottom = 185.0
+grow_vertical = 2
+focus_mode = 0
+mouse_filter = 2
+theme = SubResource( 83 )
+custom_constants/completion_lines = 0
+custom_constants/completion_max_width = 0
+custom_constants/completion_scroll_width = 0
+custom_styles/read_only = SubResource( 93 )
+custom_styles/normal = SubResource( 93 )
+readonly = true
+smooth_scrolling = true
+v_scroll_speed = 0.0
+wrap_enabled = true
+script = ExtResource( 5 )
+
+[node name="ActionButtons" type="HBoxContainer" parent="MainUI"]
+margin_left = 120.0
+margin_top = 150.0
+margin_right = 965.0
+margin_bottom = 350.0
+custom_constants/separation = 10
+
+[node name="New" type="Button" parent="MainUI/ActionButtons"]
+margin_right = 200.0
+margin_bottom = 200.0
+rect_min_size = Vector2( 200, 200 )
+focus_mode = 0
+theme = SubResource( 73 )
+custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_colors/font_color_hover = Color( 1, 1, 1, 1 )
+custom_colors/font_color_pressed = Color( 1, 1, 1, 1 )
+custom_styles/hover = SubResource( 71 )
+custom_styles/pressed = SubResource( 44 )
+custom_styles/normal = SubResource( 100 )
+enabled_focus_mode = 0
+icon_align = 1
+expand_icon = true
+script = SubResource( 76 )
+
+[node name="Icon" type="TextureRect" parent="MainUI/ActionButtons/New"]
+margin_right = 200.0
+margin_bottom = 200.0
+texture = ExtResource( 22 )
+expand = true
+stretch_mode = 6
+
+[node name="Shadow" type="TextureRect" parent="MainUI/ActionButtons/New/Icon"]
+show_behind_parent = true
+material = SubResource( 89 )
+margin_left = 5.0
+margin_top = 5.0
+margin_right = 205.0
+margin_bottom = 205.0
+rect_pivot_offset = Vector2( 120, 95 )
+texture = ExtResource( 22 )
+expand = true
+stretch_mode = 6
+
+[node name="Run" type="Button" parent="MainUI/ActionButtons"]
+margin_left = 210.0
+margin_right = 410.0
+margin_bottom = 200.0
+rect_min_size = Vector2( 200, 200 )
+focus_mode = 0
+custom_styles/hover = SubResource( 71 )
+custom_styles/pressed = SubResource( 44 )
+custom_styles/normal = SubResource( 100 )
+enabled_focus_mode = 0
+icon_align = 1
+expand_icon = true
+script = SubResource( 47 )
+
+[node name="Icon" type="TextureRect" parent="MainUI/ActionButtons/Run"]
+margin_right = 200.0
+margin_bottom = 200.0
+texture = ExtResource( 16 )
+expand = true
+stretch_mode = 6
+
+[node name="Shadow" type="TextureRect" parent="MainUI/ActionButtons/Run/Icon"]
+show_behind_parent = true
+material = SubResource( 89 )
+margin_left = 5.0
+margin_top = 5.0
+margin_right = 205.0
+margin_bottom = 205.0
+texture = ExtResource( 16 )
+expand = true
+stretch_mode = 6
+
+[node name="Edit" type="Button" parent="MainUI/ActionButtons"]
+margin_left = 420.0
+margin_right = 620.0
+margin_bottom = 200.0
+rect_min_size = Vector2( 200, 200 )
+focus_mode = 0
+custom_styles/hover = SubResource( 71 )
+custom_styles/pressed = SubResource( 44 )
+custom_styles/normal = SubResource( 100 )
+enabled_focus_mode = 0
+icon_align = 1
+expand_icon = true
+script = SubResource( 45 )
+
+[node name="Icon" type="TextureRect" parent="MainUI/ActionButtons/Edit"]
+margin_right = 200.0
+margin_bottom = 200.0
+texture = ExtResource( 8 )
+expand = true
+stretch_mode = 6
+
+[node name="Shadow" type="TextureRect" parent="MainUI/ActionButtons/Edit/Icon"]
+show_behind_parent = true
+material = SubResource( 89 )
+margin_left = 2.0
+margin_top = 2.0
+margin_right = 202.0
+margin_bottom = 202.0
+texture = ExtResource( 8 )
+expand = true
+stretch_mode = 6
+
+[node name="Delete" type="Button" parent="MainUI/ActionButtons"]
+margin_left = 630.0
+margin_right = 830.0
+margin_bottom = 200.0
+rect_min_size = Vector2( 200, 0 )
+focus_mode = 0
+custom_styles/hover = SubResource( 71 )
+custom_styles/pressed = SubResource( 44 )
+custom_styles/normal = SubResource( 100 )
+enabled_focus_mode = 0
+icon_align = 1
+expand_icon = true
+script = SubResource( 46 )
+
+[node name="Icon" type="TextureRect" parent="MainUI/ActionButtons/Delete"]
+margin_right = 200.0
+margin_bottom = 200.0
+texture = ExtResource( 11 )
+expand = true
+stretch_mode = 6
+
+[node name="Shadow" type="TextureRect" parent="MainUI/ActionButtons/Delete/Icon"]
+show_behind_parent = true
+material = SubResource( 89 )
+margin_left = 5.0
+margin_top = 5.0
+margin_right = 205.0
+margin_bottom = 205.0
+texture = ExtResource( 11 )
+expand = true
+stretch_mode = 6
+
+[node name="LoadCircle" type="Sprite" parent="."]
+visible = false
+modulate = Color( 0, 0, 0, 1 )
+scale = Vector2( 3, 3 )
+texture = ExtResource( 23 )

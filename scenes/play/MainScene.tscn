@@ -1,0 +1,727 @@
+[gd_scene load_steps=56 format=2]
+
+[ext_resource path="res://scenes/Environment.tscn" type="PackedScene" id=1]
+[ext_resource path="res://scripts/play/PlayMain.gd" type="Script" id=2]
+[ext_resource path="res://fonts/roboto/Black.ttf" type="DynamicFontData" id=3]
+[ext_resource path="res://assets/Global.tscn" type="PackedScene" id=4]
+[ext_resource path="res://fonts/andika-basic/Regular.ttf" type="DynamicFontData" id=5]
+[ext_resource path="res://fonts/salma-pro/Medium.otf" type="DynamicFontData" id=6]
+[ext_resource path="res://scripts/PlayerListScript.gd" type="Script" id=7]
+[ext_resource path="res://fonts/open-sans/ExtraBold.ttf" type="DynamicFontData" id=8]
+[ext_resource path="res://sprites/operations/edit.svg" type="Texture" id=9]
+[ext_resource path="res://sprites/submit.svg" type="Texture" id=10]
+[ext_resource path="res://fonts/consolas/Regular.ttf" type="DynamicFontData" id=11]
+[ext_resource path="res://fonts/courier-new/Bold.ttf" type="DynamicFontData" id=12]
+[ext_resource path="res://scripts/menus/BackgroundRotation.gd" type="Script" id=13]
+[ext_resource path="res://sprites/pattern.svg" type="Texture" id=14]
+[ext_resource path="res://sprites/circle.svg" type="Texture" id=15]
+
+[sub_resource type="Shader" id=79]
+code = "/* 
+Earthbound battle backgrounds shader with scrolling effect and palette cycling like in the original game.
+@retr0_dev
+	
+Apply the shader to a TextureRect or a Sprite. Use a texture with some shapes in a transparent background for best results.
+You can then use a ColorRect or another method to paint the background.
+You can use the shader on multiple TextureRects and obtain a double-buffer effect tweaking the values for each one, remember to Make Unique the shader material.
+*/
+shader_type canvas_item;
+render_mode unshaded;
+
+uniform float amplitude = 0.075;
+uniform float frequency = 10.0;
+uniform float speed = 2.0;
+uniform float amplitude_vertical = 0.0;
+uniform float frequency_vertical = 0.0;
+uniform float speed_vertical = 0.0;
+uniform vec2 scroll_direction = vec2(0.0, 0.0);
+uniform float scrolling_speed = 0.08;
+uniform bool enable_palette_cycling = false;
+uniform sampler2D palette;
+uniform float palette_speed = 0.1;
+
+uniform sampler2D gradient: hint_black;
+uniform float mix_amount;
+
+float random (vec2 uv) {
+    return fract(sin(dot(uv.xy,
+        vec2(12.9898,78.233))) * 43758.5453123);
+}
+
+
+void fragment() {
+	float diff_x = amplitude * sin((frequency * UV.y) + (speed * TIME));// * random(UV);
+	float diff_y = amplitude_vertical * sin((frequency_vertical * UV.y)  + (speed_vertical * TIME)) * random(UV);
+	vec2 scroll = scroll_direction * TIME * scrolling_speed;
+	vec4 tex = texture(TEXTURE, vec2(UV.x + diff_x, UV.y + diff_y) + scroll);
+	float palette_swap = mod(tex.r - TIME * palette_speed, 1.0);
+	
+	if (enable_palette_cycling)
+	{
+		COLOR = vec4(texture(palette, vec2(palette_swap, 0)).rgb, tex.a);
+	}
+	else COLOR = tex;
+}"
+
+[sub_resource type="ShaderMaterial" id=144]
+shader = SubResource( 79 )
+shader_param/amplitude = 0.0
+shader_param/frequency = 16.0
+shader_param/speed = 1.0
+shader_param/amplitude_vertical = 0.0
+shader_param/frequency_vertical = 0.0
+shader_param/speed_vertical = 0.0
+shader_param/scroll_direction = Vector2( 5, 1 )
+shader_param/scrolling_speed = 0.1
+shader_param/enable_palette_cycling = false
+shader_param/palette_speed = 0.1
+shader_param/mix_amount = 1.0
+
+[sub_resource type="DynamicFont" id=1]
+size = 45
+outline_size = 3
+outline_color = Color( 0, 0.152941, 0.227451, 1 )
+use_filter = true
+font_data = ExtResource( 3 )
+
+[sub_resource type="Theme" id=2]
+default_font = SubResource( 1 )
+
+[sub_resource type="StyleBoxFlat" id=3]
+bg_color = Color( 0.160784, 0.372549, 0.360784, 1 )
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="DynamicFont" id=5]
+size = 75
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="Theme" id=6]
+default_font = SubResource( 5 )
+
+[sub_resource type="StyleBoxFlat" id=4]
+bg_color = Color( 0.282353, 0.392157, 0.101961, 1 )
+border_width_left = 15
+border_width_top = 15
+border_width_right = 15
+border_width_bottom = 15
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 30
+corner_radius_top_right = 30
+corner_radius_bottom_right = 30
+corner_radius_bottom_left = 30
+
+[sub_resource type="DynamicFont" id=122]
+size = 45
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="Theme" id=8]
+default_font = SubResource( 122 )
+
+[sub_resource type="StyleBoxFlat" id=9]
+bg_color = Color( 0.00784314, 0.4, 0.313726, 1 )
+border_width_left = 15
+border_width_top = 15
+border_width_right = 15
+border_width_bottom = 15
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="DynamicFont" id=123]
+size = 35
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="Theme" id=124]
+default_font = SubResource( 123 )
+
+[sub_resource type="StyleBoxFlat" id=141]
+bg_color = Color( 0.00784314, 0.4, 0.313726, 1 )
+border_width_left = 15
+border_width_top = 15
+border_width_right = 15
+border_width_bottom = 15
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=126]
+bg_color = Color( 0, 0.384314, 0.356863, 1 )
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=125]
+bg_color = Color( 0, 0.301961, 0.282353, 1 )
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="DynamicFont" id=138]
+size = 35
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 12 )
+
+[sub_resource type="Theme" id=139]
+default_font = SubResource( 138 )
+
+[sub_resource type="StyleBoxFlat" id=140]
+bg_color = Color( 0, 0.396078, 0.301961, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="DynamicFont" id=127]
+size = 35
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 5 )
+
+[sub_resource type="Theme" id=128]
+default_font = SubResource( 127 )
+
+[sub_resource type="StyleBoxFlat" id=129]
+bg_color = Color( 0.231373, 0.337255, 0, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0.196078, 0.180392, 1 )
+corner_radius_top_left = 15
+corner_radius_top_right = 15
+corner_radius_bottom_right = 15
+corner_radius_bottom_left = 15
+
+[sub_resource type="StyleBoxFlat" id=10]
+bg_color = Color( 0.4, 0.176471, 0, 1 )
+border_width_left = 15
+border_width_top = 15
+border_width_right = 15
+border_width_bottom = 15
+border_color = Color( 0.2, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="DynamicFont" id=11]
+size = 64
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 6 )
+
+[sub_resource type="Theme" id=12]
+default_font = SubResource( 11 )
+
+[sub_resource type="StyleBoxFlat" id=13]
+bg_color = Color( 0.262745, 0.172549, 0.121569, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="DynamicFont" id=118]
+size = 50
+outline_size = 4
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 8 )
+
+[sub_resource type="Theme" id=119]
+default_font = SubResource( 118 )
+
+[sub_resource type="StyleBoxFlat" id=120]
+bg_color = Color( 0.443137, 0.262745, 0.168627, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=121]
+bg_color = Color( 0.262745, 0.172549, 0.121569, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="Curve" id=135]
+max_value = 1024.0
+_data = [ Vector2( 0, 1024 ), 0.0, 0.0, 0, 0, Vector2( 1, 1024 ), 0.0, 0.0, 0, 0 ]
+
+[sub_resource type="CurveTexture" id=136]
+curve = SubResource( 135 )
+
+[sub_resource type="Curve" id=132]
+max_value = 10.0
+_data = [ Vector2( 0, 0 ), 0.0, 0.0, 0, 0, Vector2( 1, 0 ), -61.7681, 0.0, 0, 0 ]
+
+[sub_resource type="CurveTexture" id=133]
+curve = SubResource( 132 )
+
+[sub_resource type="ParticlesMaterial" id=134]
+emission_shape = 1
+emission_sphere_radius = 3.0
+flag_disable_z = true
+spread = 5.0
+gravity = Vector3( 0, 0, 0 )
+initial_velocity = 400.0
+initial_velocity_random = 1.0
+angular_velocity = 360.0
+angular_velocity_random = 1.0
+orbit_velocity = 0.0
+orbit_velocity_random = 0.0
+linear_accel = 50.0
+linear_accel_random = 1.0
+damping = 100.0
+damping_curve = SubResource( 136 )
+angle_random = 1.0
+scale = 2.0
+scale_random = 1.0
+scale_curve = SubResource( 133 )
+color = Color( 0.580392, 1, 0.505882, 1 )
+
+[sub_resource type="DynamicFont" id=130]
+size = 100
+outline_size = 3
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+extra_spacing_char = 5
+font_data = ExtResource( 11 )
+
+[sub_resource type="Theme" id=131]
+default_font = SubResource( 130 )
+
+[sub_resource type="StyleBoxFlat" id=137]
+bg_color = Color( 0.619608, 0.4, 0, 1 )
+border_width_left = 10
+border_width_top = 10
+border_width_right = 10
+border_width_bottom = 10
+border_color = Color( 0, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=142]
+bg_color = Color( 0.262745, 0.172549, 0.121569, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.180392, 0, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[sub_resource type="StyleBoxFlat" id=143]
+bg_color = Color( 0.443137, 0.262745, 0.168627, 1 )
+border_width_left = 5
+border_width_top = 5
+border_width_right = 5
+border_width_bottom = 5
+border_color = Color( 0.239216, 0.109804, 0, 1 )
+corner_radius_top_left = 25
+corner_radius_top_right = 25
+corner_radius_bottom_right = 25
+corner_radius_bottom_left = 25
+
+[node name="Play" type="Node2D"]
+script = ExtResource( 2 )
+
+[node name="Environment" parent="." instance=ExtResource( 1 )]
+
+[node name="Global" parent="." instance=ExtResource( 4 )]
+
+[node name="MainBackground" type="Sprite" parent="."]
+modulate = Color( 1, 0.596078, 0.278431, 1 )
+material = SubResource( 144 )
+texture = ExtResource( 14 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 2500, 7500 )
+script = ExtResource( 13 )
+
+[node name="Camera" type="Camera2D" parent="."]
+current = true
+
+[node name="StartScreen" type="Node2D" parent="."]
+
+[node name="Message" type="Label" parent="StartScreen"]
+margin_left = -750.0
+margin_top = -50.0
+margin_right = 750.0
+margin_bottom = 59.0
+theme = SubResource( 2 )
+custom_styles/normal = SubResource( 3 )
+text = "CONNECTING TO SERVER..."
+align = 1
+valign = 1
+clip_text = true
+
+[node name="PlayScreen" type="Node2D" parent="."]
+
+[node name="intro" type="Control" parent="PlayScreen"]
+visible = false
+margin_right = 40.0
+margin_bottom = 40.0
+
+[node name="title" type="Label" parent="PlayScreen/intro"]
+margin_left = -750.0
+margin_top = -525.0
+margin_right = 750.0
+margin_bottom = -75.0
+theme = SubResource( 6 )
+custom_styles/normal = SubResource( 4 )
+align = 1
+valign = 1
+autowrap = true
+
+[node name="subtitle" type="Label" parent="PlayScreen/intro/title"]
+margin_left = 250.0
+margin_top = 600.0
+margin_right = 1250.0
+margin_bottom = 1050.0
+theme = SubResource( 8 )
+custom_styles/normal = SubResource( 9 )
+align = 1
+valign = 1
+autowrap = true
+
+[node name="question" type="Control" parent="PlayScreen"]
+visible = false
+margin_right = 40.0
+margin_bottom = 40.0
+
+[node name="Content" type="Control" parent="PlayScreen/question"]
+margin_left = -775.0
+margin_top = -540.0
+margin_right = -735.0
+margin_bottom = -500.0
+
+[node name="Text" type="Label" parent="PlayScreen/question/Content"]
+visible = false
+margin_right = 1725.0
+margin_bottom = 500.0
+theme = SubResource( 6 )
+custom_styles/normal = SubResource( 4 )
+text = "dasdasdsdasas"
+align = 1
+valign = 1
+clip_text = true
+
+[node name="Image" type="TextureRect" parent="PlayScreen/question/Content"]
+visible = false
+margin_right = 1725.0
+margin_bottom = 500.0
+texture = ExtResource( 9 )
+expand = true
+stretch_mode = 6
+
+[node name="MultipleChoice" type="ScrollContainer" parent="PlayScreen/question"]
+visible = false
+margin_left = -775.0
+margin_top = 50.0
+margin_right = 725.0
+margin_bottom = 500.0
+
+[node name="VBox" type="VBoxContainer" parent="PlayScreen/question/MultipleChoice"]
+margin_left = 750.0
+margin_right = 750.0
+size_flags_horizontal = 6
+size_flags_vertical = 0
+custom_constants/separation = 25
+
+[node name="Answer" type="TextEdit" parent="PlayScreen/question"]
+margin_left = -775.0
+margin_top = 50.0
+margin_right = 725.0
+margin_bottom = 500.0
+theme = SubResource( 124 )
+custom_styles/focus = SubResource( 9 )
+custom_styles/normal = SubResource( 9 )
+smooth_scrolling = true
+wrap_enabled = true
+caret_blink = true
+
+[node name="AnswerLabel" type="Label" parent="PlayScreen/question"]
+visible = false
+margin_left = -775.0
+margin_top = 50.0
+margin_right = 725.0
+margin_bottom = 500.0
+theme = SubResource( 124 )
+custom_styles/normal = SubResource( 141 )
+
+[node name="Submit" type="Button" parent="PlayScreen/question"]
+margin_left = 750.0
+margin_top = 150.0
+margin_right = 950.0
+margin_bottom = 500.0
+focus_mode = 0
+custom_styles/hover = SubResource( 126 )
+custom_styles/pressed = SubResource( 125 )
+custom_styles/normal = SubResource( 125 )
+enabled_focus_mode = 0
+icon = ExtResource( 10 )
+icon_align = 1
+expand_icon = true
+
+[node name="Timer" type="Label" parent="PlayScreen/question"]
+visible = false
+margin_left = 750.0
+margin_top = 50.0
+margin_right = 950.0
+margin_bottom = 150.0
+theme = SubResource( 139 )
+custom_styles/normal = SubResource( 140 )
+text = "asdasd"
+align = 1
+valign = 1
+
+[node name="TemplatePair" type="HBoxContainer" parent="PlayScreen/question"]
+visible = false
+margin_left = -388.0
+margin_top = 50.0
+margin_right = 337.0
+margin_bottom = 237.0
+size_flags_horizontal = 15
+size_flags_vertical = 0
+custom_constants/separation = 10
+
+[node name="FirstAnswer" type="Label" parent="PlayScreen/question/TemplatePair"]
+margin_right = 725.0
+margin_bottom = 187.0
+rect_min_size = Vector2( 725, 0 )
+mouse_filter = 0
+theme = SubResource( 128 )
+custom_styles/normal = SubResource( 129 )
+text = "asdasdasdaasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdadasdasdasdasdadasdassd"
+autowrap = true
+
+[node name="SecondAnswer" type="Label" parent="PlayScreen/question/TemplatePair"]
+visible = false
+margin_left = 735.0
+margin_right = 1460.0
+margin_bottom = 187.0
+rect_min_size = Vector2( 725, 0 )
+mouse_filter = 0
+theme = SubResource( 128 )
+custom_styles/normal = SubResource( 129 )
+text = "asdasdasdaasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasdadasdasdasdasdadasdassd"
+autowrap = true
+
+[node name="Players" type="ScrollContainer" parent="."]
+visible = false
+margin_left = -1825.0
+margin_top = -540.0
+margin_right = -800.0
+margin_bottom = 540.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_styles/bg = SubResource( 10 )
+scroll_horizontal_enabled = false
+script = ExtResource( 7 )
+
+[node name="VBox" type="VBoxContainer" parent="Players"]
+margin_left = 15.0
+margin_top = 15.0
+margin_right = 865.0
+margin_bottom = 115.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+custom_constants/separation = 10
+alignment = 1
+
+[node name="Template" type="Label" parent="Players/VBox"]
+visible = false
+margin_right = 850.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 850, 100 )
+rect_pivot_offset = Vector2( 52, 49 )
+theme = SubResource( 12 )
+custom_colors/font_color = Color( 0.752941, 0.647059, 0.494118, 1 )
+custom_styles/normal = SubResource( 13 )
+text = "hehe"
+align = 1
+valign = 1
+
+[node name="Points" type="Label" parent="Players/VBox/Template"]
+show_behind_parent = true
+margin_left = 850.0
+margin_right = 1000.0
+margin_bottom = 100.0
+theme = SubResource( 119 )
+custom_styles/normal = SubResource( 120 )
+text = "0"
+align = 1
+valign = 1
+clip_text = true
+__meta__ = {
+"_edit_use_anchors_": true
+}
+
+[node name="Reserved" type="Label" parent="Players/VBox"]
+margin_right = 850.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 850, 100 )
+rect_pivot_offset = Vector2( 52, 49 )
+theme = SubResource( 12 )
+custom_colors/font_color = Color( 0.752941, 0.647059, 0.494118, 1 )
+custom_styles/normal = SubResource( 121 )
+text = "YOU"
+align = 1
+valign = 1
+
+[node name="Points" type="Label" parent="Players/VBox/Reserved"]
+show_behind_parent = true
+margin_left = 850.0
+margin_right = 1000.0
+margin_bottom = 100.0
+theme = SubResource( 119 )
+custom_colors/font_color = Color( 0.835294, 0.576471, 0.321569, 1 )
+custom_styles/normal = SubResource( 120 )
+text = "0"
+align = 1
+valign = 1
+clip_text = true
+__meta__ = {
+"_edit_use_anchors_": true
+}
+
+[node name="ScoreEffect" type="Node2D" parent="."]
+visible = false
+position = Vector2( -1080, -475 )
+
+[node name="Particle" type="Particles2D" parent="ScoreEffect"]
+emitting = false
+amount = 100
+lifetime = 0.5
+one_shot = true
+explosiveness = 0.5
+randomness = 0.5
+local_coords = false
+process_material = SubResource( 134 )
+
+[node name="Text" type="Label" parent="ScoreEffect"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -125.0
+margin_top = -125.0
+margin_right = 125.0
+margin_bottom = 125.0
+theme = SubResource( 131 )
+custom_styles/normal = SubResource( 137 )
+text = "+69"
+align = 1
+valign = 1
+
+[node name="GameOverScreen" type="Node2D" parent="."]
+visible = false
+
+[node name="PlayerList" type="ScrollContainer" parent="GameOverScreen"]
+margin_left = -960.0
+margin_top = -540.0
+margin_right = 960.0
+margin_bottom = 540.0
+mouse_filter = 2
+input_pass_on_modal_close_click = false
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="VBox" type="VBoxContainer" parent="GameOverScreen/PlayerList"]
+mouse_filter = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+
+[node name="Template" type="Label" parent="GameOverScreen/PlayerList/VBox"]
+visible = false
+margin_right = 1770.0
+margin_bottom = 100.0
+rect_min_size = Vector2( 1770, 100 )
+rect_pivot_offset = Vector2( 52, 49 )
+theme = SubResource( 12 )
+custom_colors/font_color = Color( 0.752941, 0.647059, 0.494118, 1 )
+custom_styles/normal = SubResource( 142 )
+align = 1
+valign = 1
+
+[node name="Points" type="Label" parent="GameOverScreen/PlayerList/VBox/Template"]
+show_behind_parent = true
+margin_left = 1770.0
+margin_right = 1920.0
+margin_bottom = 100.0
+theme = SubResource( 119 )
+custom_colors/font_color = Color( 0.835294, 0.576471, 0.321569, 1 )
+custom_styles/normal = SubResource( 143 )
+align = 1
+valign = 1
+clip_text = true
+__meta__ = {
+"_edit_use_anchors_": true
+}
+
+[node name="LoadCircle" type="Sprite" parent="."]
+visible = false
+position = Vector2( 810, -540 )
+scale = Vector2( 3, 3 )
+texture = ExtResource( 15 )

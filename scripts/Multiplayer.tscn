@@ -1,0 +1,126 @@
+[gd_scene load_steps=10 format=2]
+
+[ext_resource path="res://fonts/consolas/Regular.ttf" type="DynamicFontData" id=1]
+[ext_resource path="res://fonts/courier-new/Regular.ttf" type="DynamicFontData" id=2]
+
+[sub_resource type="DynamicFont" id=1]
+size = 64
+outline_size = 2
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 1 )
+
+[sub_resource type="Theme" id=2]
+default_font = SubResource( 1 )
+
+[sub_resource type="GDScript" id=3]
+resource_name = "Chat"
+script/source = "extends TextEdit
+
+onready var chat = get_parent().get_node(\"Chat\")
+
+func on_click():
+	if ProjectSettings.get(\"state\") == \"client\":
+		rpc(\"send_message\",text)
+		text = \"\"
+
+func _ready():
+	$Send.connect(\"button_up\",self,\"on_click\")
+
+master func send_message(text):
+	chat.text = chat.text + '\\n' + text
+"
+
+[sub_resource type="GDScript" id=4]
+resource_name = "Host"
+script/source = "extends Button
+
+func on_click():
+	if ProjectSettings.get(\"state\") == null:
+		var server = NetworkedMultiplayerENet.new()
+		var result = server.create_server(8888,32)
+		
+		if result == 0:
+			ProjectSettings.set(\"state\",\"server\")
+			get_tree().set_network_peer(server)
+			
+			get_parent().get_node(\"Message\").hide()
+			get_parent().get_node(\"Chat\").text = \"YOU ARE THE SERVER NOW\"
+
+func _ready():
+	connect(\"button_up\",self,\"on_click\")
+"
+
+[sub_resource type="GDScript" id=5]
+resource_name = "Connect"
+script/source = "extends Button
+
+func on_click():
+	if ProjectSettings.get(\"state\") == null:
+		var client = NetworkedMultiplayerENet.new()
+		var result = client.create_client(\"localhost\",8888)
+
+		if result == 0:
+			ProjectSettings.set(\"state\",\"client\")
+			get_tree().set_network_peer(client)
+
+func _ready():
+	connect(\"button_up\",self,\"on_click\")
+"
+
+[sub_resource type="DynamicFont" id=6]
+size = 64
+outline_size = 1
+outline_color = Color( 0, 0, 0, 1 )
+use_filter = true
+font_data = ExtResource( 2 )
+
+[sub_resource type="Theme" id=7]
+default_font = SubResource( 6 )
+
+[node name="MainMenu" type="Node2D"]
+
+[node name="Background" type="ColorRect" parent="."]
+margin_right = 1920.0
+margin_bottom = 1080.0
+color = Color( 0, 0.564706, 0.654902, 1 )
+
+[node name="Message" type="TextEdit" parent="."]
+margin_top = 1000.0
+margin_right = 1920.0
+margin_bottom = 1080.0
+theme = SubResource( 2 )
+script = SubResource( 3 )
+
+[node name="Send" type="Button" parent="Message"]
+margin_left = 1620.0
+margin_right = 1920.0
+margin_bottom = 80.0
+theme = SubResource( 2 )
+text = "SEND"
+
+[node name="Host" type="Button" parent="."]
+margin_left = 200.0
+margin_right = 667.0
+margin_bottom = 71.0
+theme = SubResource( 2 )
+text = "HOST A SERVER"
+script = SubResource( 4 )
+
+[node name="Connect" type="Button" parent="."]
+margin_left = 1253.0
+margin_right = 1720.0
+margin_bottom = 71.0
+theme = SubResource( 2 )
+text = "CONNECT"
+script = SubResource( 5 )
+
+[node name="Chat" type="Label" parent="."]
+margin_top = 80.0
+margin_right = 1920.0
+margin_bottom = 980.0
+theme = SubResource( 7 )
+
+[node name="Camera" type="Camera2D" parent="."]
+anchor_mode = 0
+current = true
